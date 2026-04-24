@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTE | Hethereau</title>
+    <link rel="icon" type="image/webp" href="Site-favicon.webp">
+    <link rel="shortcut icon" type="image/webp" href="Site-favicon.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --core: #00f2ff;
+            --ring1: #7000ff;
+            --ring2: #ff007a;
+            --ring3: #39ff14;
+            --preload: #ffb300;
+            --dark: #050815;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Orbitron', sans-serif; }
+        html, body { overflow: hidden; height: 100vh; background: #000; color: white; }
+
+        #city-canvas {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh; z-index: 1;
+        }
+
+        /* --- LOADER --- */
+        #loader {
+            position: fixed; inset: 0;
+            background: var(--dark);
+            z-index: 2000;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 30px;
+            transition: opacity 0.8s ease;
+        }
+        #loader.hidden { opacity: 0; pointer-events: none; }
+        #loader .loader-title {
+            color: var(--core); font-size: 0.7rem;
+            letter-spacing: 6px; text-transform: uppercase;
+        }
+        #loader .loader-core {
+            width: 70px; height: 70px; border-radius: 50%;
+            border: 2px solid rgba(0, 242, 255, 0.2);
+            border-top-color: var(--core);
+            animation: spin 1.2s linear infinite;
+        }
+        #loader .loader-status {
+            color: #aaa; font-size: 0.6rem;
+            letter-spacing: 3px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* --- NAV --- */
+        nav {
+            position: fixed; top: 0; left: 0; width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 5%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent);
+            z-index: 10;
+            pointer-events: none;
+        }
+        nav > * { pointer-events: auto; }
+        .logo { font-size: 1.5rem; font-weight: 900; color: var(--core); letter-spacing: 2px; }
+        .nav-actions { display: flex; gap: 12px; align-items: center; }
+        .enter-btn {
+            padding: 10px 24px;
+            border: 1px solid var(--core);
+            background: rgba(0, 242, 255, 0.08);
+            color: var(--core);
+            text-decoration: none;
+            font-size: 0.75rem; letter-spacing: 2.5px;
+            text-transform: uppercase; font-weight: 700;
+            transition: 0.3s;
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        }
+        .enter-btn:hover {
+            background: var(--core); color: black;
+            box-shadow: 0 0 20px var(--core);
+        }
+
+        /* --- AUDIO PLAYER --- */
+        .audio-player {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 6px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            transition: 0.3s;
+        }
+        .audio-player:hover { border-color: rgba(0, 242, 255, 0.4); }
+        .audio-player.playing { border-color: rgba(57, 255, 20, 0.4); }
+        .audio-player .play-btn {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: transparent; border: 1px solid rgba(0, 242, 255, 0.5);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: var(--core); transition: 0.3s; flex-shrink: 0; padding: 0;
+        }
+        .audio-player.playing .play-btn { border-color: var(--ring3); color: var(--ring3); }
+        .audio-player .play-btn .icon-play,
+        .audio-player .play-btn .icon-pause { font-size: 0.55rem; line-height: 1; }
+        .audio-player .play-btn .icon-pause { display: none; }
+        .audio-player.playing .play-btn .icon-play { display: none; }
+        .audio-player.playing .play-btn .icon-pause { display: inline; }
+        .audio-player .player-icon {
+            color: rgba(255, 255, 255, 0.3); font-size: 0.7rem; transition: 0.3s;
+        }
+        .audio-player:hover .player-icon { color: var(--core); }
+        .audio-player.playing .player-icon { color: var(--ring3); }
+        .audio-player .volume-slider {
+            width: 45px; opacity: 0.6;
+            -webkit-appearance: none; appearance: none;
+            height: 2px; background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px; outline: none; cursor: pointer;
+        }
+        .audio-player .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--core); cursor: pointer;
+        }
+        .audio-player.playing .volume-slider::-webkit-slider-thumb { background: var(--ring3); }
+
+        /* --- PROGRESS DOTS --- */
+        .progress-hud {
+            position: fixed; top: 50%; right: 20px;
+            transform: translateY(-50%);
+            z-index: 5;
+            display: flex; flex-direction: column; gap: 12px;
+            pointer-events: none;
+        }
+        .progress-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: 0.3s;
+        }
+        .progress-dot.active {
+            background: var(--core);
+            box-shadow: 0 0 10px var(--core);
+            transform: scale(1.4);
+        }
+        .progress-dot.passed { background: rgba(0, 242, 255, 0.5); }
+
+        /* --- COMPTEURS --- */
+        .hud-countdown {
+            position: fixed; bottom: 25px; right: 25px;
+            display: flex; flex-direction: column; gap: 8px;
+            z-index: 5;
+            min-width: 200px;
+            pointer-events: none;
+        }
+        .hud-timer {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 3px solid var(--core);
+            padding: 8px 13px;
+            backdrop-filter: blur(6px);
+        }
+        .hud-timer.preload { border-left-color: var(--preload); }
+        .hud-timer .hud-label {
+            font-size: 0.5rem; letter-spacing: 2px;
+            color: var(--core); text-transform: uppercase;
+        }
+        .hud-timer.preload .hud-label { color: var(--preload); }
+        .hud-timer .hud-value {
+            color: white; font-size: 0.85rem;
+            font-weight: 700; letter-spacing: 2px;
+            margin-top: 2px;
+        }
+        .hud-timer.expired { border-left-color: var(--ring3); }
+        .hud-timer.expired .hud-label,
+        .hud-timer.expired .hud-value { color: var(--ring3); }
+
+        /* --- SCROLL HINT --- */
+        .scroll-hint {
+            position: fixed; bottom: 25px; left: 25px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.6rem; letter-spacing: 2px;
+            z-index: 5;
+            animation: hintPulse 2s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .scroll-hint.hidden { opacity: 0; transition: opacity 0.5s; }
+        @keyframes hintPulse {
+            0%, 100% { opacity: 0.4; }
+            50%      { opacity: 0.9; }
+        }
+
+        /* --- PANEL INFO --- */
+        .panel-info {
+            position: fixed; bottom: 100px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            max-width: 500px; width: 90%;
+            text-align: center;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        .panel-info.fade { opacity: 0; }
+        .panel-info .pi-tag {
+            display: inline-block;
+            font-size: 0.55rem; letter-spacing: 4px;
+            color: var(--core); text-transform: uppercase;
+            padding: 3px 12px;
+            border: 1px solid var(--core);
+            margin-bottom: 12px;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        .panel-info .pi-title {
+            font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+            font-weight: 900; letter-spacing: 5px;
+            text-transform: uppercase;
+            text-shadow:
+                0 0 20px rgba(0, 242, 255, 0.6),
+                0 0 40px rgba(255, 0, 122, 0.3);
+            margin-bottom: 10px;
+        }
+        .panel-info .pi-desc {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.75rem; letter-spacing: 1.5px;
+            line-height: 1.6;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            padding: 12px 18px;
+            border-left: 2px solid var(--core);
+            border-right: 2px solid var(--core);
+        }
+        .panel-info.final { pointer-events: auto; }
+        .panel-info.final .enter-site-btn {
+            display: inline-block; margin-top: 20px;
+            padding: 14px 40px;
+            border: 2px solid var(--ring3);
+            background: rgba(57, 255, 20, 0.15);
+            color: var(--ring3);
+            text-decoration: none;
+            font-size: 0.9rem; letter-spacing: 3px;
+            font-weight: 900; text-transform: uppercase;
+            transition: 0.3s;
+            clip-path: polygon(5% 0, 100% 0, 95% 100%, 0% 100%);
+            text-shadow: 0 0 10px var(--ring3);
+        }
+        .panel-info.final .enter-site-btn:hover {
+            background: var(--ring3); color: black;
+            box-shadow: 0 0 30px var(--ring3);
+            text-shadow: none;
+        }
+
+        @media (max-width: 768px) {
+            .hud-countdown { min-width: 160px; bottom: 15px; right: 15px; }
+            .hud-timer .hud-value { font-size: 0.7rem; }
+            .scroll-hint { display: none; }
+            .enter-btn { padding: 8px 16px; font-size: 0.65rem; letter-spacing: 1.5px; }
+            .audio-player .volume-slider { width: 35px; }
+            .panel-info { bottom: 140px; }
+            .progress-hud { right: 12px; }
+            .panel-info .pi-desc { font-size: 0.7rem; padding: 10px 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="loader-title">// INITIALISATION HETHEREAU</div>
+        <div class="loader-core"></div>
+        <div class="loader-status" id="loader-status">CONNEXION AU RÉSEAU...</div>
+    </div>
+
+    <canvas id="city-canvas"></canvas>
+
+    <nav>
+        <div class="logo">NTE // SYSTEM</div>
+        <div class="nav-actions">
+            <a href="main.html" class="enter-btn">▶ Entrer dans le Site</a>
+            <div class="audio-player" id="audio-player" title="OST NTE">
+                <span class="player-icon">🎧</span>
+                <button class="play-btn" id="audio-play-btn" aria-label="Lecture/Pause">
+                    <span class="icon-play">▶</span>
+                    <span class="icon-pause">❚❚</span>
+                </button>
+                <input type="range" class="volume-slider" id="audio-volume-slider"
+                       min="0" max="1" step="0.01" value="0.05" aria-label="Volume">
+                <audio id="audio-element" loop preload="none">
+                    <source src="Neverness_to_Everness__Main_Theme.mp3" type="audio/mpeg">
+                </audio>
+            </div>
+        </div>
+    </nav>
+
+    <div class="progress-hud" id="progress-hud"></div>
+
+    <div class="panel-info" id="panel-info">
+        <div class="pi-tag" id="pi-tag">// NEVERNESS TO EVERNESS</div>
+        <div class="pi-title" id="pi-title">Hethereau</div>
+        <div class="pi-desc" id="pi-desc">Scrollez pour survoler la ville</div>
+    </div>
+
+    <div class="hud-countdown">
+        <div class="hud-timer preload" id="hud-preload">
+            <div class="hud-label">// Pré-chargement 27.04</div>
+            <div class="hud-value" id="preload-val">-- J : --H : --M</div>
+        </div>
+        <div class="hud-timer" id="hud-launch">
+            <div class="hud-label">// Lancement 29.04</div>
+            <div class="hud-value" id="launch-val">-- J : --H : --M</div>
+        </div>
+    </div>
+
+    <div class="scroll-hint" id="scroll-hint">▼ SCROLL POUR SURVOLER HETHEREAU</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+    // ========================================
+    // HETHEREAU CITY v3 — Survol aérien nocturne
+    // ========================================
+
+    const PANELS = [
+        {
+            tag: '// NEVERNESS TO EVERNESS',
+            title: 'Lancement 29.04',
+            desc: 'Le jour J approche. Préparez-vous à plonger dans Hethereau, ville surnaturelle ouverte où chaque anomalie cache un secret.',
+            image: 'Never-to-Everness-release-date-key-visual.jpg',
+            color: 0xff007a,
+            isFinal: false
+        },
+        {
+            tag: '// GAMEPLAY',
+            title: 'Le Jeu',
+            desc: 'Un open-world urbain en Unreal Engine 5. Conduisez, explorez, combattez les anomalies qui menacent la réalité.',
+            image: 'hq720-gameplay.jpg',
+            color: 0x00f2ff,
+            isFinal: false
+        },
+        {
+            tag: '// DOSSIER AGENTS',
+            title: 'Personnages',
+            desc: 'Rencontrez les agents d\'Hethereau. Chacun possède ses propres capacités Esper et son histoire unique.',
+            image: 'hq720.jpg',
+            color: 0x7000ff,
+            isFinal: false
+        },
+        {
+            tag: '// BANNIÈRE LIMITÉE',
+            title: 'The Ichi-daime',
+            desc: 'Nanally en vedette. Recrutez le trio Coluccis avant la fin de l\'événement.',
+            image: 'Limited_banner_Nanally.webp',
+            color: 0xff007a,
+            isFinal: false
+        },
+        {
+            tag: '// VIE URBAINE',
+            title: 'Activités',
+            desc: 'Pêche, arcade, mahjong... Hethereau est une ville où tout est possible, même entre deux chasses aux anomalies.',
+            image: 'Fishing.webp',
+            color: 0x39ff14,
+            isFinal: false
+        },
+        {
+            tag: '// ÉVÉNEMENT',
+            title: 'CNY 2026',
+            desc: 'Célébrez la nouvelle année avec les héros d\'Hethereau. L\'événement saisonnier est de retour.',
+            image: 'CNY_2026.webp',
+            color: 0xffb300,
+            isFinal: false
+        },
+        {
+            tag: '// ACCÈS COMPLET',
+            title: 'Entrer dans le Site',
+            desc: 'Découvrez tous les personnages, bannières, activités et informations techniques.',
+            image: null,
+            color: 0x39ff14,
+            isFinal: true
+        }
+    ];
+
+    const canvas = document.getElementById('city-canvas');
+    const loader = document.getElementById('loader');
+    const loaderStatus = document.getElementById('loader-status');
+    const isMobile = window.innerWidth < 768;
+
+    // ---- SCENE : NUIT BLEUE PROFONDE ----
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x0a1030, 80, 500);
+
+    const camera = new THREE.PerspectiveCamera(
+        60, window.innerWidth / window.innerHeight, 0.1, 1500
+    );
+
+    const renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        antialias: !isMobile,
+        alpha: false,
+        powerPreference: 'high-performance'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x050815);
+
+    // ---- CIEL SPHÉRIQUE AVEC DÉGRADÉ + HALO URBAIN ----
+    function createSkyTexture() {
+        const c = document.createElement('canvas');
+        c.width = 2048; c.height = 1024;
+        const ctx = c.getContext('2d');
+
+        // Gradient vertical : zenith bleu profond → horizon bleu-violet chaud (pollution lumineuse)
+        const grad = ctx.createLinearGradient(0, 0, 0, 1024);
+        grad.addColorStop(0,    '#030510'); // zenith presque noir
+        grad.addColorStop(0.3,  '#050a1f');
+        grad.addColorStop(0.55, '#0a1535');
+        grad.addColorStop(0.75, '#1a2550'); // transition
+        grad.addColorStop(0.88, '#3a2560'); // halo violet
+        grad.addColorStop(0.95, '#4a2050'); // halo rose pollution
+        grad.addColorStop(1,    '#2a1030'); // ras du sol
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 2048, 1024);
+
+        // Nuages diffus - taches discrètes de bleu clair
+        for (let i = 0; i < 30; i++) {
+            const x = Math.random() * 2048;
+            const y = 100 + Math.random() * 500;
+            const rad = 80 + Math.random() * 200;
+            const cloudGrad = ctx.createRadialGradient(x, y, 0, x, y, rad);
+            const alpha = 0.04 + Math.random() * 0.05;
+            cloudGrad.addColorStop(0, `rgba(80, 100, 160, ${alpha})`);
+            cloudGrad.addColorStop(1, 'rgba(80, 100, 160, 0)');
+            ctx.fillStyle = cloudGrad;
+            ctx.beginPath();
+            ctx.arc(x, y, rad, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Halos plus lumineux à l'horizon (pollution d'éclairage de la ville)
+        for (let i = 0; i < 8; i++) {
+            const x = Math.random() * 2048;
+            const y = 850 + Math.random() * 100;
+            const rad = 150 + Math.random() * 250;
+            const haloGrad = ctx.createRadialGradient(x, y, 0, x, y, rad);
+            const colors = [
+                ['rgba(255, 100, 150, 0.15)', 'rgba(255, 100, 150, 0)'],
+                ['rgba(100, 150, 255, 0.12)', 'rgba(100, 150, 255, 0)'],
+                ['rgba(255, 180, 100, 0.1)',  'rgba(255, 180, 100, 0)'],
+            ][Math.floor(Math.random() * 3)];
+            haloGrad.addColorStop(0, colors[0]);
+            haloGrad.addColorStop(1, colors[1]);
+            ctx.fillStyle = haloGrad;
+            ctx.beginPath();
+            ctx.arc(x, y, rad, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        const tex = new THREE.CanvasTexture(c);
+        return tex;
+    }
+
+    // Crée une grande sphère inversée autour de la scène avec la texture ciel
+    const skyGeo = new THREE.SphereGeometry(1000, 32, 16);
+    // Inverser les normales pour voir la texture de l'intérieur
+    skyGeo.scale(-1, 1, 1);
+    const skyMat = new THREE.MeshBasicMaterial({
+        map: createSkyTexture(),
+        side: THREE.BackSide,
+        fog: false
+    });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
+    scene.add(sky);
+
+    // ---- LUMIÈRES NUIT URBAINE ----
+    scene.add(new THREE.AmbientLight(0x1a2540, 0.6));
+
+    // Lumière principale depuis le haut (simulation lumière ville)
+    const cityLight = new THREE.DirectionalLight(0x4466aa, 0.4);
+    cityLight.position.set(0, 200, 50);
+    scene.add(cityLight);
+
+    // Reflet au sol bleu cyan
+    scene.add(new THREE.HemisphereLight(0x2060ff, 0x000510, 0.35));
+
+    // ---- CIEL ÉTOILÉ (skybox simple avec points) ----
+    function createStarfield() {
+        const starCount = isMobile ? 800 : 1500;
+        const g = new THREE.BufferGeometry();
+        const p = new Float32Array(starCount * 3);
+        const c = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            // Distribution sphérique autour de la scène
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = 600 + Math.random() * 200;
+            p[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+            p[i * 3 + 1] = Math.abs(r * Math.cos(phi)) + 50; // au-dessus de l'horizon
+            p[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+            const brightness = 0.5 + Math.random() * 0.5;
+            const tint = Math.random();
+            c[i * 3]     = brightness * (tint > 0.9 ? 0.6 : 1);
+            c[i * 3 + 1] = brightness * (tint > 0.9 ? 0.7 : 1);
+            c[i * 3 + 2] = brightness;
+        }
+        g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+        g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+        const m = new THREE.PointsMaterial({
+            size: 1.2, vertexColors: true, transparent: true,
+            opacity: 0.9, sizeAttenuation: false
+        });
+        return new THREE.Points(g, m);
+    }
+    scene.add(createStarfield());
+
+    // ---- TEXTURE DE SOL : ASPHALTE AVEC ROUTES ----
+    function createGroundTexture() {
+        const c = document.createElement('canvas');
+        c.width = 1024; c.height = 1024;
+        const ctx = c.getContext('2d');
+
+        // Fond asphalte sombre avec bruit
+        ctx.fillStyle = '#0a0e1a';
+        ctx.fillRect(0, 0, 1024, 1024);
+
+        // Grain / texture asphalte
+        for (let i = 0; i < 4000; i++) {
+            const x = Math.random() * 1024;
+            const y = Math.random() * 1024;
+            const shade = Math.random();
+            if (shade > 0.85)      ctx.fillStyle = 'rgba(40, 50, 75, 0.6)';
+            else if (shade > 0.5)  ctx.fillStyle = 'rgba(20, 30, 50, 0.5)';
+            else                   ctx.fillStyle = 'rgba(5, 10, 20, 0.5)';
+            ctx.fillRect(x, y, 1 + Math.random() * 2, 1 + Math.random() * 2);
+        }
+
+        // Grille de routes (découpe la texture en 4 quadrants de blocs urbains)
+        // Route principale horizontale
+        ctx.fillStyle = '#050810';
+        ctx.fillRect(0, 480, 1024, 64);
+        // Route principale verticale
+        ctx.fillRect(480, 0, 64, 1024);
+
+        // Lignes blanches continues au bord de chaque route
+        ctx.fillStyle = 'rgba(220, 230, 255, 0.5)';
+        // horizontale
+        ctx.fillRect(0, 484, 1024, 2);
+        ctx.fillRect(0, 538, 1024, 2);
+        // verticale
+        ctx.fillRect(484, 0, 2, 1024);
+        ctx.fillRect(538, 0, 2, 1024);
+
+        // Ligne discontinue jaune au milieu
+        ctx.fillStyle = 'rgba(255, 220, 100, 0.7)';
+        for (let x = 0; x < 1024; x += 40) {
+            if (x < 470 || x > 554) ctx.fillRect(x, 511, 20, 3);
+        }
+        for (let y = 0; y < 1024; y += 40) {
+            if (y < 470 || y > 554) ctx.fillRect(511, y, 3, 20);
+        }
+
+        // Passages piétons aux intersections
+        ctx.fillStyle = 'rgba(240, 250, 255, 0.6)';
+        // Nord
+        for (let i = 0; i < 8; i++) {
+            ctx.fillRect(484 + i * 8, 460, 5, 18);
+        }
+        // Sud
+        for (let i = 0; i < 8; i++) {
+            ctx.fillRect(484 + i * 8, 546, 5, 18);
+        }
+        // Ouest
+        for (let i = 0; i < 8; i++) {
+            ctx.fillRect(460, 484 + i * 8, 18, 5);
+        }
+        // Est
+        for (let i = 0; i < 8; i++) {
+            ctx.fillRect(546, 484 + i * 8, 18, 5);
+        }
+
+        // Quelques flaques/reflets humides (taches bleutées)
+        for (let i = 0; i < 20; i++) {
+            const x = Math.random() * 1024;
+            const y = Math.random() * 1024;
+            const rad = 8 + Math.random() * 20;
+            const grad = ctx.createRadialGradient(x, y, 0, x, y, rad);
+            grad.addColorStop(0, 'rgba(40, 80, 150, 0.3)');
+            grad.addColorStop(1, 'rgba(40, 80, 150, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(x, y, rad, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(6, 6); // répète pour couvrir le grand sol
+        return tex;
+    }
+
+    const groundTex = createGroundTexture();
+    const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(1500, 1500),
+        new THREE.MeshPhongMaterial({
+            map: groundTex,
+            color: 0xffffff,
+            shininess: 120,
+            specular: 0x3060aa
+        })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0;
+    scene.add(ground);
+
+    // Grille lumineuse faible au sol
+    const grid = new THREE.GridHelper(800, 80, 0x1a3a66, 0x0a1530);
+    grid.material.opacity = 0.25;
+    grid.material.transparent = true;
+    grid.position.y = 0.05;
+    scene.add(grid);
+
+    // ---- TEXTURES DE BÂTIMENTS ----
+    // Texture "gratte-ciel vitré" : façade moderne avec grille de fenêtres fines
+    function createSkyscraperTexture() {
+        const c = document.createElement('canvas');
+        c.width = 256; c.height = 512;
+        const ctx = c.getContext('2d');
+
+        // Fond : gradient vertical bleu acier
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, 512);
+        bgGrad.addColorStop(0, '#0a1530');
+        bgGrad.addColorStop(0.5, '#0d1a3a');
+        bgGrad.addColorStop(1, '#081025');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, 256, 512);
+
+        // Poteaux verticaux (structure métallique)
+        ctx.fillStyle = '#1a2a50';
+        for (let col = 0; col < 9; col++) {
+            const x = col * 28;
+            ctx.fillRect(x, 0, 2, 512);
+        }
+        // Lignes horizontales (dalles d'étages)
+        ctx.fillStyle = '#1a2a50';
+        for (let row = 0; row < 42; row++) {
+            const y = row * 12;
+            ctx.fillRect(0, y, 256, 1);
+        }
+
+        // Fenêtres : grille fine 8 × 40 avec variations
+        for (let row = 0; row < 40; row++) {
+            for (let col = 0; col < 8; col++) {
+                const x = col * 28 + 4;
+                const y = row * 12 + 2;
+                const r = Math.random();
+                let windowColor;
+                // Pattern par bloc d'étages pour simuler des bureaux/appartements
+                const blockSeed = Math.floor(row / 5);
+                if (r > 0.92) windowColor = '#ffe5a8';      // chaude allumée
+                else if (r > 0.7) windowColor = '#b8cfff';  // bleue froide
+                else if (r > 0.45) windowColor = '#6a88b8'; // faible
+                else if (r > 0.2) windowColor = '#2a3a60';  // reflet sombre
+                else windowColor = '#10203d';               // très sombre
+                ctx.fillStyle = windowColor;
+                ctx.fillRect(x, y, 22, 8);
+
+                // Reflet : trait blanc diagonal sur les fenêtres les plus brillantes
+                if (r > 0.7) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 3, y + 1);
+                    ctx.lineTo(x + 8, y + 7);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        return tex;
+    }
+
+    // Texture "building commercial" : façades plus bariolées, étages avec enseignes
+    function createCommercialTexture() {
+        const c = document.createElement('canvas');
+        c.width = 256; c.height = 512;
+        const ctx = c.getContext('2d');
+
+        // Fond béton/tôle
+        ctx.fillStyle = '#0a0f1c';
+        ctx.fillRect(0, 0, 256, 512);
+
+        // Dalles d'étages plus visibles
+        for (let row = 0; row < 14; row++) {
+            const y = row * 36;
+            // Séparateur étage
+            ctx.fillStyle = '#2a3550';
+            ctx.fillRect(0, y, 256, 2);
+            // Base étage : couleur légèrement différente
+            ctx.fillStyle = row % 2 === 0 ? '#0f1626' : '#0d1322';
+            ctx.fillRect(0, y + 2, 256, 34);
+        }
+
+        // Fenêtres plus grandes et espacées
+        for (let row = 0; row < 14; row++) {
+            const y = row * 36 + 8;
+            for (let col = 0; col < 6; col++) {
+                const x = col * 40 + 6;
+                const r = Math.random();
+                let wc;
+                if (r > 0.85)      wc = '#fff4b8';
+                else if (r > 0.5)  wc = '#a8c8f0';
+                else if (r > 0.25) wc = '#4a6088';
+                else               wc = '#1a2540';
+                ctx.fillStyle = wc;
+                ctx.fillRect(x, y, 34, 22);
+                // Cadre de fenêtre
+                ctx.strokeStyle = '#2a3550';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, 34, 22);
+                // Croisillon
+                ctx.beginPath();
+                ctx.moveTo(x + 17, y);
+                ctx.lineTo(x + 17, y + 22);
+                ctx.stroke();
+            }
+        }
+
+        // Quelques climatiseurs / unités externes
+        ctx.fillStyle = '#44506a';
+        for (let i = 0; i < 8; i++) {
+            const x = Math.random() * 240;
+            const y = Math.random() * 480;
+            ctx.fillRect(x, y, 10, 7);
+        }
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        return tex;
+    }
+
+    // Texture "résidentiel" : petites fenêtres régulières, style bloc d'habitation
+    function createResidentialTexture() {
+        const c = document.createElement('canvas');
+        c.width = 128; c.height = 256;
+        const ctx = c.getContext('2d');
+
+        // Fond crème/beige sombre (building résidentiel)
+        ctx.fillStyle = '#1a1a28';
+        ctx.fillRect(0, 0, 128, 256);
+
+        // Lignes d'étages
+        for (let row = 0; row < 12; row++) {
+            const y = row * 21;
+            ctx.fillStyle = '#0e0e18';
+            ctx.fillRect(0, y, 128, 1);
+        }
+
+        // Fenêtres petites et régulières
+        for (let row = 0; row < 12; row++) {
+            for (let col = 0; col < 5; col++) {
+                const x = col * 24 + 6;
+                const y = row * 21 + 5;
+                const r = Math.random();
+                let wc;
+                if (r > 0.7)      wc = '#ffdca0';
+                else if (r > 0.4) wc = '#7a90b0';
+                else              wc = '#2a2a3a';
+                ctx.fillStyle = wc;
+                ctx.fillRect(x, y, 16, 12);
+                // Barreaux de balcon par-dessus certaines
+                if (row > 0 && row < 11 && Math.random() > 0.7) {
+                    ctx.fillStyle = '#0a0a14';
+                    for (let b = 0; b < 4; b++) {
+                        ctx.fillRect(x + b * 4 + 1, y + 13, 1, 5);
+                    }
+                }
+            }
+        }
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        return tex;
+    }
+
+    // Alias pour compatibilité avec le code existant
+    function createWindowTextureBlue() {
+        return createSkyscraperTexture();
+    }
+
+    // ---- PANNEAUX DÉCO avec logos fictifs ----
+    const FAKE_BRANDS = ['WITOP', 'FALCON', 'CUBOX', 'VESTA', 'ICKY', 'NEON', 'ONIX', 'HETH', 'TYRA', 'ORBIS', 'KIRA', 'FOX', 'LED9', 'N-7'];
+    const BRAND_COLORS = [0xff3366, 0x00f2ff, 0xff9900, 0x39ff14, 0xffd800, 0xff007a, 0x7000ff, 0xffffff];
+
+    function createAdTexture() {
+        const c = document.createElement('canvas');
+        c.width = 256; c.height = 128;
+        const ctx = c.getContext('2d');
+        const color = BRAND_COLORS[Math.floor(Math.random() * BRAND_COLORS.length)];
+        const colorStr = '#' + color.toString(16).padStart(6, '0');
+        // Fond soit plein soit avec bordure
+        if (Math.random() > 0.5) {
+            ctx.fillStyle = colorStr;
+            ctx.fillRect(0, 0, 256, 128);
+            ctx.fillStyle = '#fff';
+        } else {
+            ctx.fillStyle = '#0a0f20';
+            ctx.fillRect(0, 0, 256, 128);
+            ctx.strokeStyle = colorStr;
+            ctx.lineWidth = 4;
+            ctx.strokeRect(4, 4, 248, 120);
+            ctx.fillStyle = colorStr;
+        }
+        // Texte du logo
+        const brand = FAKE_BRANDS[Math.floor(Math.random() * FAKE_BRANDS.length)];
+        ctx.font = 'bold 60px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(brand, 128, 64);
+        const tex = new THREE.CanvasTexture(c);
+        return tex;
+    }
+
+    // ---- PANNEAU NÉON VERTICAL (style japonais avec chiffres) ----
+    function createVerticalSignTexture() {
+        const c = document.createElement('canvas');
+        c.width = 64; c.height = 256;
+        const ctx = c.getContext('2d');
+        const color = BRAND_COLORS[Math.floor(Math.random() * BRAND_COLORS.length)];
+        const colorStr = '#' + color.toString(16).padStart(6, '0');
+        ctx.fillStyle = '#0a0f20';
+        ctx.fillRect(0, 0, 64, 256);
+        ctx.strokeStyle = colorStr;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(2, 2, 60, 252);
+        // Série de pictos/lettres verticaux
+        ctx.fillStyle = colorStr;
+        ctx.font = 'bold 36px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        const chars = ['NTE', '24H', 'BAR', 'CLUB', 'LED', '7-11', 'ARC'];
+        const s = chars[Math.floor(Math.random() * chars.length)];
+        for (let i = 0; i < s.length; i++) {
+            ctx.fillText(s[i], 32, 50 + i * 45);
+        }
+        const tex = new THREE.CanvasTexture(c);
+        return tex;
+    }
+
+    // ---- BUILDING DÉCORATIF (ville de fond) ----
+    function makeDecorBuilding(x, z, w, d, h, type = 'auto') {
+        // Type de building
+        if (type === 'auto') {
+            const r = Math.random();
+            if (h > 70) type = 'skyscraper';
+            else if (r > 0.5) type = 'commercial';
+            else type = 'residential';
+        }
+
+        // Texture adaptée au type
+        let tex, baseColor, emissiveColor, emissiveInt, shininess;
+        if (type === 'skyscraper') {
+            tex = createSkyscraperTexture();
+            tex.repeat.set(Math.max(1, Math.round(w / 5)), Math.max(1, Math.round(h / 10)));
+            baseColor = 0x9ab5dd;
+            emissiveColor = 0x2a4070;
+            emissiveInt = 0.25;
+            shininess = 100;
+        } else if (type === 'commercial') {
+            tex = createCommercialTexture();
+            tex.repeat.set(Math.max(1, Math.round(w / 4)), Math.max(1, Math.round(h / 8)));
+            baseColor = 0x99a0b0;
+            emissiveColor = 0x1a3060;
+            emissiveInt = 0.18;
+            shininess = 40;
+        } else {
+            tex = createResidentialTexture();
+            tex.repeat.set(Math.max(1, Math.round(w / 3)), Math.max(1, Math.round(h / 5)));
+            baseColor = 0x8090a0;
+            emissiveColor = 0x152040;
+            emissiveInt = 0.12;
+            shininess = 20;
+        }
+
+        const mat = new THREE.MeshPhongMaterial({
+            map: tex,
+            color: baseColor,
+            emissive: emissiveColor,
+            emissiveIntensity: emissiveInt,
+            shininess: shininess
+        });
+        const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        b.position.set(x, h / 2, z);
+        scene.add(b);
+
+        // Bande lumineuse au sommet (sur ~60% des buildings)
+        if (Math.random() > 0.4 && type !== 'residential') {
+            const color = BRAND_COLORS[Math.floor(Math.random() * BRAND_COLORS.length)];
+            const strip = new THREE.Mesh(
+                new THREE.BoxGeometry(w * 1.02, 0.3, d * 1.02),
+                new THREE.MeshBasicMaterial({ color: color })
+            );
+            strip.position.set(x, h + 0.15, z);
+            scene.add(strip);
+        }
+
+        // Panneaux publicitaires sur les buildings commerciaux
+        if (type === 'commercial' && Math.random() > 0.3) {
+            const adCount = 1 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < adCount; i++) {
+                // Panneau horizontal sur façade avant
+                if (Math.random() > 0.4) {
+                    const adW = Math.min(w * 0.8, 8);
+                    const adH = adW / 2;
+                    const adTex = createAdTexture();
+                    const ad = new THREE.Mesh(
+                        new THREE.PlaneGeometry(adW, adH),
+                        new THREE.MeshBasicMaterial({ map: adTex, toneMapped: false })
+                    );
+                    ad.position.set(x, h * (0.3 + Math.random() * 0.5), z + d / 2 + 0.15);
+                    scene.add(ad);
+                }
+                // Panneau vertical sur côté
+                if (Math.random() > 0.5) {
+                    const vTex = createVerticalSignTexture();
+                    const vSign = new THREE.Mesh(
+                        new THREE.PlaneGeometry(2, 8),
+                        new THREE.MeshBasicMaterial({ map: vTex, toneMapped: false })
+                    );
+                    vSign.position.set(x + w / 2 + 0.15, h * 0.4, z + d * 0.3);
+                    vSign.rotation.y = Math.PI / 2;
+                    scene.add(vSign);
+                }
+            }
+        }
+
+        // Antenne sur gratte-ciels
+        if (type === 'skyscraper' && Math.random() > 0.5) {
+            const ant = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.1, 0.15, 6, 6),
+                new THREE.MeshBasicMaterial({ color: 0xff3366 })
+            );
+            ant.position.set(x, h + 3, z);
+            scene.add(ant);
+            const light = new THREE.Mesh(
+                new THREE.SphereGeometry(0.3, 6, 6),
+                new THREE.MeshBasicMaterial({ color: 0xff0033 })
+            );
+            light.position.set(x, h + 6.2, z);
+            light.userData = { blink: true, phase: Math.random() * Math.PI * 2 };
+            scene.add(light);
+            blinkingLights.push(light);
+        }
+    }
+
+    const blinkingLights = [];
+
+    // ---- BUILDING AVEC PANNEAU INFO (les 7 stations) ----
+    const panelObjects = [];
+
+    function createPanelTexture(panel, onReady) {
+        if (!panel.image) {
+            const c = document.createElement('canvas');
+            c.width = 1024; c.height = 768;
+            const ctx = c.getContext('2d');
+            drawPanelOverlay(ctx, panel, 1024, 768);
+            onReady(new THREE.CanvasTexture(c));
+            return;
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const c = document.createElement('canvas');
+            c.width = 1024; c.height = 768;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#050510';
+            ctx.fillRect(0, 0, 1024, 768);
+            const iw = img.width, ih = img.height;
+            const scale = Math.max(1024 / iw, 768 / ih);
+            const sw = iw * scale, sh = ih * scale;
+            const sx = (1024 - sw) / 2, sy = (768 - sh) / 2;
+            ctx.drawImage(img, sx, sy, sw, sh);
+            drawPanelOverlay(ctx, panel, 1024, 768);
+            const tex = new THREE.CanvasTexture(c);
+            tex.anisotropy = 4;
+            onReady(tex);
+        };
+        img.onerror = () => {
+            const c = document.createElement('canvas');
+            c.width = 1024; c.height = 768;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#' + panel.color.toString(16).padStart(6, '0');
+            ctx.globalAlpha = 0.2;
+            ctx.fillRect(0, 0, 1024, 768);
+            ctx.globalAlpha = 1;
+            drawPanelOverlay(ctx, panel, 1024, 768);
+            onReady(new THREE.CanvasTexture(c));
+        };
+        img.src = panel.image;
+    }
+
+    function drawPanelOverlay(ctx, panel, W, H) {
+        const grad = ctx.createLinearGradient(0, H * 0.4, 0, H);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.92)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.strokeStyle = '#' + panel.color.toString(16).padStart(6, '0');
+        ctx.lineWidth = 6;
+        ctx.strokeRect(8, 8, W - 16, H - 16);
+
+        ctx.font = 'bold 22px Orbitron, sans-serif';
+        ctx.fillStyle = '#' + panel.color.toString(16).padStart(6, '0');
+        ctx.textAlign = 'left';
+        ctx.fillText(panel.tag, 30, 50);
+
+        ctx.font = 'bold 80px Orbitron, sans-serif';
+        ctx.fillStyle = 'white';
+        ctx.shadowColor = '#' + panel.color.toString(16).padStart(6, '0');
+        ctx.shadowBlur = 25;
+        ctx.fillText(panel.title.toUpperCase(), 30, H - 100);
+        ctx.shadowBlur = 0;
+
+        ctx.font = '22px Orbitron, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        const words = panel.desc.split(' ');
+        let line = '', yLine = H - 50;
+        const maxWidth = W - 80;
+        for (let i = 0; i < words.length; i++) {
+            const test = line + words[i] + ' ';
+            if (ctx.measureText(test).width > maxWidth && line) {
+                ctx.fillText(line.trim(), 30, yLine);
+                line = words[i] + ' ';
+                yLine += 28;
+                if (yLine > H - 20) break;
+            } else {
+                line = test;
+            }
+        }
+        if (line && yLine <= H - 20) ctx.fillText(line.trim(), 30, yLine);
+    }
+
+    function makePanelBuilding(x, z, rotY, panel, callback) {
+        // Building porteur plus imposant
+        const bw = 26, bd = 14, bh = 80; // plus haut pour être vu depuis les airs
+        const tex = createWindowTextureBlue();
+        tex.repeat.set(6, 16);
+        const bMat = new THREE.MeshPhongMaterial({
+            map: tex,
+            color: 0x7090cc,
+            emissive: panel.color,
+            emissiveIntensity: 0.18,
+            shininess: 60
+        });
+        const building = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), bMat);
+        building.position.set(x, bh / 2, z);
+        building.rotation.y = rotY;
+        scene.add(building);
+
+        // Bande néon au sommet
+        const strip = new THREE.Mesh(
+            new THREE.BoxGeometry(bw * 1.05, 0.5, bd * 1.05),
+            new THREE.MeshBasicMaterial({ color: panel.color })
+        );
+        strip.position.set(x, bh + 0.25, z);
+        strip.rotation.y = rotY;
+        scene.add(strip);
+
+        // Panneau pub
+        createPanelTexture(panel, (panelTex) => {
+            const panelW = 24, panelH = 18;
+            const panelMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(panelW, panelH),
+                new THREE.MeshBasicMaterial({ map: panelTex, toneMapped: false })
+            );
+            const offset = bd / 2 + 0.3;
+            const localPos = new THREE.Vector3(0, bh * 0.55, offset);
+            localPos.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+            panelMesh.position.set(x + localPos.x, localPos.y, z + localPos.z);
+            panelMesh.rotation.y = rotY;
+            scene.add(panelMesh);
+
+            // Cadre lumineux
+            const frame = new THREE.Mesh(
+                new THREE.PlaneGeometry(panelW + 1, panelH + 1),
+                new THREE.MeshBasicMaterial({
+                    color: panel.color, transparent: true, opacity: 0.55, side: THREE.DoubleSide
+                })
+            );
+            const backOffset = new THREE.Vector3(0, 0, -0.05);
+            backOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+            frame.position.set(x + localPos.x + backOffset.x, localPos.y, z + localPos.z + backOffset.z);
+            frame.rotation.y = rotY;
+            scene.add(frame);
+
+            panelObjects.push({ building, panelMesh, frame });
+            callback && callback();
+        });
+    }
+
+    // ---- DISPOSITION URBAINE ----
+    // Les panneaux info forment un chemin en zigzag dans la ville
+    // Entre eux, on remplit avec des buildings denses
+    const CORRIDOR_SPACING = 120;
+    const CORRIDOR_SIDE = 50;
+    const cameraStations = [];
+
+    function layoutPanelsAndCity(onAllReady) {
+        // 1) Placer les panneaux info le long d'un axe
+        let readyCount = 0;
+        PANELS.forEach((panel, i) => {
+            const side = i % 2 === 0 ? -1 : 1;
+            const px = side * CORRIDOR_SIDE;
+            const pz = -i * CORRIDOR_SPACING;
+            const rotY = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+
+            makePanelBuilding(px, pz, rotY, panel, () => {
+                readyCount++;
+                if (readyCount === PANELS.length) {
+                    // 2) Remplir la ville autour
+                    generateDecorCity();
+                    onAllReady && onAllReady();
+                }
+            });
+
+            // Station caméra : vue aérienne en retrait face au panneau
+            // On se place plus haut et en retrait pour avoir une vraie vue "survol"
+            const camOffset = 50;
+            const camX = side * (CORRIDOR_SIDE - camOffset);
+            const camY = 65;
+            const camZ = pz + 10;
+            const lookX = px;
+            const lookY = 45;
+            const lookZ = pz;
+
+            cameraStations.push({
+                pos: new THREE.Vector3(camX, camY, camZ),
+                look: new THREE.Vector3(lookX, lookY, lookZ)
+            });
+        });
+    }
+
+    // Ville dense autour des panneaux
+    function generateDecorCity() {
+        const totalLength = (PANELS.length - 1) * CORRIDOR_SPACING;
+        const zMin = -totalLength - 200;
+        const zMax = 200;
+
+        // Grille dense de buildings
+        const gridStep = 22;
+        const fieldRadius = 350;
+
+        for (let x = -fieldRadius; x <= fieldRadius; x += gridStep) {
+            for (let z = zMin; z <= zMax; z += gridStep) {
+                // Éviter le couloir central (les panneaux sont là)
+                const distFromCorridor = Math.abs(x);
+                if (distFromCorridor < 35 && z > zMin && z < zMax) continue;
+
+                // Proba croissante vers l'extérieur
+                const falloff = 1 - Math.min(1, Math.abs(x) / fieldRadius);
+                if (Math.random() < 0.2 + falloff * 0.5) continue;
+
+                // Décalage aléatoire pour éviter l'effet grille parfaite
+                const ox = x + (Math.random() - 0.5) * gridStep * 0.6;
+                const oz = z + (Math.random() - 0.5) * gridStep * 0.6;
+
+                // Tailles variées — beaucoup de hauts au loin
+                const distFactor = Math.min(1, Math.abs(ox) / fieldRadius);
+                const w = 8 + Math.random() * 8;
+                const d = 8 + Math.random() * 8;
+
+                let h;
+                const rh = Math.random();
+                if (rh > 0.9) h = 90 + Math.random() * 60;      // gratte-ciels rares
+                else if (rh > 0.6) h = 40 + Math.random() * 35; // moyens
+                else h = 15 + Math.random() * 25;               // petits/commerciaux
+
+                // Un peu plus de gratte-ciels au loin pour skyline
+                if (distFactor > 0.5 && Math.random() > 0.6) h += 20 + Math.random() * 40;
+
+                makeDecorBuilding(ox, oz, w, d, h);
+            }
+        }
+
+        // Quelques gros tours iconiques très loin en fond
+        for (let i = 0; i < 12; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 400 + Math.random() * 150;
+            const fx = Math.cos(angle) * dist;
+            const fz = Math.sin(angle) * dist - totalLength / 2;
+            const fh = 120 + Math.random() * 80;
+            makeDecorBuilding(fx, fz, 15, 15, fh, 'skyscraper');
+        }
+    }
+
+    // ---- LUMIÈRES DE RUE (points aléatoires) ----
+    function addStreetLights() {
+        const lightCount = isMobile ? 30 : 60;
+        for (let i = 0; i < lightCount; i++) {
+            const z = -Math.random() * (PANELS.length * CORRIDOR_SPACING);
+            const side = Math.random() > 0.5 ? 1 : -1;
+            const x = side * (15 + Math.random() * 8);
+            const color = [0xff9933, 0xffd88a, 0x66ccff][Math.floor(Math.random() * 3)];
+            const light = new THREE.Mesh(
+                new THREE.SphereGeometry(0.4, 6, 6),
+                new THREE.MeshBasicMaterial({ color: color })
+            );
+            light.position.set(x, 4, z);
+            scene.add(light);
+        }
+    }
+
+    // ---- PARTICULES ATMOSPHÉRIQUES ----
+    const pc = isMobile ? 300 : 600;
+    const pg = new THREE.BufferGeometry();
+    const pos = new Float32Array(pc * 3);
+    const col = new Float32Array(pc * 3);
+    const PARTICLE_COLORS = [0x4488ff, 0x66aacc, 0xaaccff, 0xff6699, 0xffffff];
+    const totalCityLength = PANELS.length * CORRIDOR_SPACING;
+    for (let i = 0; i < pc; i++) {
+        pos[i * 3]     = (Math.random() - 0.5) * 400;
+        pos[i * 3 + 1] = 20 + Math.random() * 100;
+        pos[i * 3 + 2] = (Math.random() - 0.5) * (totalCityLength + 400) - totalCityLength / 2;
+        const c = new THREE.Color(PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)]);
+        col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    }
+    pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const particles = new THREE.Points(pg, new THREE.PointsMaterial({
+        size: 0.6, vertexColors: true, transparent: true,
+        opacity: 0.6, blending: THREE.AdditiveBlending
+    }));
+    scene.add(particles);
+
+    // ---- SYSTÈME DE CAMÉRA (vol aérien) ----
+    let virtualScroll = 0;
+    const MAX_SCROLL = (PANELS.length - 1) * 1000;
+
+    let currentCamPos = new THREE.Vector3(-60, 90, 120);
+    let currentLookAt = new THREE.Vector3(0, 45, 0);
+
+    function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+    function updateCamera() {
+        if (cameraStations.length === 0) return;
+
+        const rawProgress = virtualScroll / 1000;
+        const segment = Math.floor(rawProgress);
+        const localT = rawProgress - segment;
+
+        let targetPos, targetLook;
+
+        if (segment < 0) {
+            targetPos = cameraStations[0].pos.clone().add(new THREE.Vector3(0, 30, 50));
+            targetLook = cameraStations[0].look.clone();
+        } else if (segment >= cameraStations.length - 1) {
+            targetPos = cameraStations[cameraStations.length - 1].pos.clone();
+            targetLook = cameraStations[cameraStations.length - 1].look.clone();
+        } else {
+            const from = cameraStations[segment];
+            const to = cameraStations[segment + 1];
+            const t = smoothstep(localT);
+
+            targetPos = from.pos.clone().lerp(to.pos, t);
+            // Arc vertical plus prononcé pour vol aérien
+            const arc = Math.sin(t * Math.PI) * 25;
+            targetPos.y += arc;
+
+            targetLook = from.look.clone().lerp(to.look, t);
+        }
+
+        currentCamPos.lerp(targetPos, 0.08);
+        currentLookAt.lerp(targetLook, 0.1);
+
+        camera.position.copy(currentCamPos);
+        camera.lookAt(currentLookAt);
+    }
+
+    // ---- SCROLL ----
+    window.addEventListener('wheel', (e) => {
+        virtualScroll = Math.max(0, Math.min(MAX_SCROLL, virtualScroll + e.deltaY * 1.5));
+        hideScrollHint();
+    }, { passive: true });
+
+    let touchStartY = 0;
+    window.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+        const delta = touchStartY - e.touches[0].clientY;
+        virtualScroll = Math.max(0, Math.min(MAX_SCROLL, virtualScroll + delta * 5));
+        touchStartY = e.touches[0].clientY;
+        hideScrollHint();
+    }, { passive: true });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+            virtualScroll = Math.min(MAX_SCROLL, virtualScroll + 200);
+            hideScrollHint();
+        } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+            virtualScroll = Math.max(0, virtualScroll - 200);
+        }
+    });
+
+    function hideScrollHint() {
+        document.getElementById('scroll-hint').classList.add('hidden');
+    }
+
+    // ---- PANEL INFO OVERLAY ----
+    const piTag   = document.getElementById('pi-tag');
+    const piTitle = document.getElementById('pi-title');
+    const piDesc  = document.getElementById('pi-desc');
+    const panelInfo = document.getElementById('panel-info');
+    let currentPanelIndex = -1;
+    let isFadingPanel = false;
+
+    function updatePanelInfo() {
+        const rawProgress = virtualScroll / 1000;
+        const nearest = Math.round(rawProgress);
+        const distToNearest = Math.abs(rawProgress - nearest);
+        const idx = (distToNearest < 0.35) ? Math.max(0, Math.min(PANELS.length - 1, nearest)) : -1;
+
+        if (idx !== currentPanelIndex) {
+            if (!isFadingPanel) {
+                isFadingPanel = true;
+                panelInfo.classList.add('fade');
+                setTimeout(() => {
+                    currentPanelIndex = idx;
+                    if (idx >= 0) {
+                        const p = PANELS[idx];
+                        piTag.innerText = p.tag;
+                        piTitle.innerText = p.title;
+                        if (p.isFinal) {
+                            piDesc.innerHTML = p.desc + '<br><a href="main.html" class="enter-site-btn">▶ Entrer</a>';
+                            panelInfo.classList.add('final');
+                        } else {
+                            piDesc.innerText = p.desc;
+                            panelInfo.classList.remove('final');
+                        }
+                        panelInfo.classList.remove('fade');
+                    }
+                    isFadingPanel = false;
+                }, 250);
+            }
+        }
+
+        document.querySelectorAll('.progress-dot').forEach((d, i) => {
+            d.classList.remove('active', 'passed');
+            if (i < nearest) d.classList.add('passed');
+            if (i === nearest && distToNearest < 0.35) d.classList.add('active');
+        });
+    }
+
+    const progressHud = document.getElementById('progress-hud');
+    PANELS.forEach(() => {
+        const d = document.createElement('div');
+        d.className = 'progress-dot';
+        progressHud.appendChild(d);
+    });
+
+    // ---- ANIMATION LOOP ----
+    const clock = new THREE.Clock();
+    function animate() {
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+
+        updateCamera();
+        updatePanelInfo();
+
+        // Particules flottantes avec drift
+        const pa = pg.attributes.position;
+        for (let i = 0; i < pc; i++) {
+            pa.array[i * 3 + 1] += 0.02;
+            pa.array[i * 3]     += Math.sin(t * 0.3 + i) * 0.01;
+            if (pa.array[i * 3 + 1] > 120) pa.array[i * 3 + 1] = 20;
+        }
+        pa.needsUpdate = true;
+
+        // Feux clignotants sur antennes
+        blinkingLights.forEach(l => {
+            const u = l.userData;
+            const blink = (Math.sin(t * 2 + u.phase) + 1) / 2;
+            l.material.opacity = 0.3 + blink * 0.7;
+            l.material.transparent = true;
+        });
+
+        renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ---- INIT ----
+    function init() {
+        loaderStatus.innerText = 'GÉNÉRATION DE HETHEREAU...';
+        setTimeout(() => {
+            loaderStatus.innerText = 'INSTALLATION DES PANNEAUX...';
+            layoutPanelsAndCity(() => {
+                loaderStatus.innerText = 'ÉCLAIRAGE URBAIN...';
+                addStreetLights();
+                setTimeout(() => {
+                    loaderStatus.innerText = 'PRÊT';
+                    setTimeout(() => {
+                        loader.classList.add('hidden');
+                        currentPanelIndex = 0;
+                        const p = PANELS[0];
+                        piTag.innerText = p.tag;
+                        piTitle.innerText = p.title;
+                        piDesc.innerText = p.desc;
+                        animate();
+                    }, 400);
+                }, 300);
+            });
+        }, 300);
+    }
+    init();
+
+    // ========================================
+    // COMPTEURS
+    // ========================================
+    const preloadDate = new Date("April 27, 2026 04:00:00").getTime();
+    const launchDate  = new Date("April 29, 2026 04:00:00").getTime();
+    const pad = n => n < 10 ? '0' + n : n;
+
+    function updateHud() {
+        const now = Date.now();
+        const diffP = preloadDate - now;
+        const hudP = document.getElementById('hud-preload');
+        const valP = document.getElementById('preload-val');
+        if (diffP > 0) {
+            hudP.classList.remove('expired');
+            const d = Math.floor(diffP / 86400000);
+            const h = Math.floor((diffP % 86400000) / 3600000);
+            const m = Math.floor((diffP % 3600000) / 60000);
+            valP.innerText = `${d}J : ${pad(h)}H : ${pad(m)}M`;
+        } else {
+            hudP.classList.add('expired');
+            valP.innerText = 'DISPONIBLE';
+        }
+        const diffL = launchDate - now;
+        const hudL = document.getElementById('hud-launch');
+        const valL = document.getElementById('launch-val');
+        if (diffL > 0) {
+            hudL.classList.remove('expired');
+            const d = Math.floor(diffL / 86400000);
+            const h = Math.floor((diffL % 86400000) / 3600000);
+            const m = Math.floor((diffL % 3600000) / 60000);
+            valL.innerText = `${d}J : ${pad(h)}H : ${pad(m)}M`;
+        } else {
+            hudL.classList.add('expired');
+            valL.innerText = 'ONLINE';
+        }
+    }
+    setInterval(updateHud, 1000);
+    updateHud();
+
+    // ========================================
+    // AUDIO
+    // ========================================
+    const audioEl = document.getElementById('audio-element');
+    const audioPlayer = document.getElementById('audio-player');
+    const playBtn = document.getElementById('audio-play-btn');
+    const volumeSlider = document.getElementById('audio-volume-slider');
+    audioEl.volume = 0.05;
+    playBtn.addEventListener('click', () => {
+        if (audioEl.paused) {
+            audioEl.play().then(() => audioPlayer.classList.add('playing')).catch(() => {});
+        } else {
+            audioEl.pause();
+            audioPlayer.classList.remove('playing');
+        }
+    });
+    volumeSlider.addEventListener('input', e => {
+        audioEl.volume = parseFloat(e.target.value);
+    });
+    audioEl.addEventListener('pause', () => audioPlayer.classList.remove('playing'));
+    audioEl.addEventListener('play',  () => audioPlayer.classList.add('playing'));
+    </script>
+</body>
+</html>

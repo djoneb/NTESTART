@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTE | Terminal Hethereau</title>
+    <link rel="icon" type="image/webp" href="Site-favicon.webp">
+    <link rel="shortcut icon" type="image/webp" href="Site-favicon.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --core: #00f2ff;
+            --ring1: #7000ff;
+            --ring2: #ff007a;
+            --ring3: #39ff14;
+            --preload: #ffb300;
+            --dark: #0a0a0c;
+            --card-bg: #16161a;
+            --light: #f4f4f4;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Orbitron', sans-serif; }
+        html { scroll-behavior: smooth; }
+        body { background-color: var(--dark); color: var(--light); line-height: 1.6; overflow-x: hidden; }
+
+        /* --- AUDIO PLAYER (minimaliste, intégré dans la nav) --- */
+        .audio-player {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 6px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            font-family: 'Orbitron', sans-serif;
+            transition: 0.3s;
+            margin-left: 20px;  /* espace avec les nav-links à gauche */
+        }
+        .audio-player:hover {
+            border-color: rgba(0, 242, 255, 0.4);
+        }
+        .audio-player.playing {
+            border-color: rgba(57, 255, 20, 0.4);
+        }
+        .audio-player .play-btn {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: transparent;
+            border: 1px solid rgba(0, 242, 255, 0.5);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--core);
+            transition: 0.3s;
+            flex-shrink: 0;
+            padding: 0;
+        }
+        .audio-player.playing .play-btn {
+            border-color: var(--ring3);
+            color: var(--ring3);
+        }
+        .audio-player .play-btn:hover {
+            background: rgba(0, 242, 255, 0.1);
+        }
+        .audio-player.playing .play-btn:hover {
+            background: rgba(57, 255, 20, 0.1);
+        }
+        .audio-player .play-btn .icon-play,
+        .audio-player .play-btn .icon-pause {
+            font-size: 0.55rem;
+            line-height: 1;
+        }
+        .audio-player .play-btn .icon-pause { display: none; }
+        .audio-player.playing .play-btn .icon-play { display: none; }
+        .audio-player.playing .play-btn .icon-pause { display: inline; }
+
+        /* Petite icône casque à gauche du bouton play (identité visuelle) */
+        .audio-player .player-icon {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 0.7rem;
+            transition: 0.3s;
+        }
+        .audio-player:hover .player-icon { color: var(--core); }
+        .audio-player.playing .player-icon { color: var(--ring3); }
+
+        /* Waveform animée minimaliste */
+        .audio-player .waveform {
+            display: none; gap: 1.5px; align-items: flex-end;
+            height: 10px;
+            margin-left: 2px;
+        }
+        .audio-player.playing .waveform { display: flex; }
+        .audio-player .waveform span {
+            width: 1.5px; background: var(--ring3);
+            border-radius: 1px;
+            animation: wave 0.9s ease-in-out infinite;
+        }
+        .audio-player .waveform span:nth-child(1) { height: 40%; animation-delay: -0.4s; }
+        .audio-player .waveform span:nth-child(2) { height: 80%; animation-delay: -0.2s; }
+        .audio-player .waveform span:nth-child(3) { height: 60%; animation-delay: -0.6s; }
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.4); }
+            50%      { transform: scaleY(1); }
+        }
+
+        /* Slider de volume discret (apparaît au hover) */
+        .audio-player .volume-slider {
+            width: 0; opacity: 0;
+            overflow: hidden;
+            transition: width 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+            -webkit-appearance: none; appearance: none;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+        .audio-player:hover .volume-slider,
+        .audio-player.playing .volume-slider {
+            width: 55px; opacity: 1; margin-left: 2px;
+        }
+        .audio-player .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--core);
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .audio-player.playing .volume-slider::-webkit-slider-thumb {
+            background: var(--ring3);
+        }
+        .audio-player .volume-slider::-moz-range-thumb {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--core);
+            cursor: pointer;
+            border: none;
+            transition: background 0.3s;
+        }
+        .audio-player.playing .volume-slider::-moz-range-thumb {
+            background: var(--ring3);
+        }
+
+        @media (max-width: 768px) {
+            .audio-player { margin-left: 0; }
+            /* Sur mobile le slider reste toujours visible (pas de hover fiable) */
+            .audio-player .volume-slider {
+                width: 45px; opacity: 1; margin-left: 2px;
+            }
+        }
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 5%; background: rgba(0, 0, 0, 0.95);
+            position: fixed; width: 100%; top: 0; z-index: 1000;
+            border-bottom: 2px solid var(--ring1);
+        }
+        .logo { font-size: 1.5rem; font-weight: 900; color: var(--core); letter-spacing: 2px; }
+        .nav-links { display: flex; list-style: none; margin-left: auto; }
+        .nav-links li { margin-left: 25px; }
+        .nav-links a { text-decoration: none; color: white; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; transition: 0.3s; }
+        .nav-links a:hover { color: var(--core); text-shadow: 0 0 10px var(--core); }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            min-height: 100vh;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: linear-gradient(rgba(10, 10, 12, 0.75), rgba(10, 10, 12, 0.95)), url('Never-to-Everness-release-date-key-visual.jpg');
+            background-size: cover; background-position: center;
+            padding: 120px 20px 60px; text-align: center;
+        }
+
+        .hero h1 { font-size: clamp(1.8rem, 5vw, 3.5rem); margin-bottom: 10px; letter-spacing: 5px; text-transform: uppercase; }
+        .hero-subtitle { color: var(--ring3); font-size: 0.7rem; margin-bottom: 40px; letter-spacing: 5px; }
+
+        /* --- BLOC COMPTEUR PRINCIPAL --- */
+        .counter-block { display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; }
+        .counter-label {
+            font-size: 0.7rem; letter-spacing: 3px; margin-bottom: 15px;
+            padding: 5px 15px; border: 1px solid currentColor;
+            text-transform: uppercase;
+        }
+        .counter-label.primary { color: var(--core); }
+
+        /* LE DATA CORE (COMPTEUR PRINCIPAL) */
+        .data-core {
+            position: relative; width: 350px; height: 350px;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .data-core svg { position: absolute; transform: rotate(-90deg); width: 100%; height: 100%; }
+        .ring { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
+        .ring-bg { stroke: rgba(255, 255, 255, 0.05); stroke-width: 8; }
+
+        .core-info { text-align: center; z-index: 10; }
+        .main-timer { font-size: 3rem; font-weight: 900; color: white; text-shadow: 0 0 20px var(--core); }
+        .sub-data { color: var(--core); font-size: 0.8rem; margin-top: 5px; letter-spacing: 2px; }
+
+        /* --- BANDEAU DISCRET PRÉ-CHARGEMENT --- */
+        .preload-bar {
+            display: inline-flex; align-items: center; gap: 15px;
+            padding: 10px 20px;
+            background: rgba(255, 179, 0, 0.05);
+            border: 1px solid rgba(255, 179, 0, 0.4);
+            border-left: 3px solid var(--preload);
+            font-size: 0.75rem; letter-spacing: 2px;
+            margin-bottom: 40px;
+            max-width: 100%;
+        }
+        .preload-bar .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--preload); box-shadow: 0 0 10px var(--preload);
+            animation: pulse 1.5s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+        .preload-bar .label {
+            color: var(--preload); text-transform: uppercase; font-weight: 700;
+        }
+        .preload-bar .separator { color: rgba(255, 255, 255, 0.2); }
+        .preload-bar .value { color: #fff; font-weight: 700; }
+
+        /* ÉTAT ACTIF / TERMINÉ */
+        .counter-block.expired .main-timer { color: var(--ring3); text-shadow: 0 0 25px var(--ring3); }
+        .counter-block.expired .sub-data { color: var(--ring3); }
+        .preload-bar.expired { border-color: var(--ring3); border-left-color: var(--ring3); background: rgba(57, 255, 20, 0.05); }
+        .preload-bar.expired .dot { background: var(--ring3); box-shadow: 0 0 10px var(--ring3); }
+        .preload-bar.expired .label { color: var(--ring3); }
+
+        /* --- BOUTONS --- */
+        .btn-group { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+        .btn { 
+            padding: 12px 30px; border-radius: 2px; text-decoration: none; font-weight: bold; 
+            text-transform: uppercase; transition: 0.4s; display: inline-flex; align-items: center; gap: 10px;
+            font-size: 0.8rem; border: 1px solid var(--core); color: var(--core);
+            background: rgba(0, 242, 255, 0.05);
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        }
+        .btn:hover { background: var(--core); color: black; box-shadow: 0 0 20px var(--core); transform: scale(1.05); }
+        .btn.magenta { border-color: var(--ring2); color: var(--ring2); background: rgba(255, 0, 122, 0.05); }
+        .btn.magenta:hover { background: var(--ring2); color: white; box-shadow: 0 0 20px var(--ring2); }
+        .btn.discord { border-color: #5865F2; color: #5865F2; background: rgba(88, 101, 242, 0.05); }
+        .btn.discord:hover { background: #5865F2; color: white; box-shadow: 0 0 20px #5865F2; }
+
+        /* --- SECTIONS INFOS --- */
+        section { padding: 80px 10%; }
+        .section-title { font-size: 2rem; margin-bottom: 40px; text-align: center; color: var(--core); text-transform: uppercase; letter-spacing: 3px; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 4px; border-left: 4px solid var(--ring1); transition: 0.3s; }
+        .card:hover { transform: translateY(-10px); background: #1c1c22; }
+        .card h3 { color: var(--ring2); margin-bottom: 15px; }
+
+        /* --- SECTION PERSONNAGES --- */
+        .character-showcase {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;
+            margin-top: 40px;
+        }
+        .character-showcase img { width: 100%; border-radius: 4px; border: 1px solid var(--ring2); padding: 4px; }
+        .char-text h3 { color: var(--ring2); font-size: 1.4rem; margin-bottom: 15px; letter-spacing: 2px; }
+        .char-text p { margin-bottom: 15px; }
+        .char-quote {
+            border-left: 3px solid var(--ring2); padding-left: 15px;
+            font-style: italic; color: #ccc; font-size: 0.9rem;
+        }
+        .roster-banner {
+            margin-top: 40px; width: 100%; border-radius: 4px;
+            border: 1px solid var(--ring1);
+        }
+
+        /* --- BANNIÈRE INTRO PERSONNAGES (discrète, en tête de section) --- */
+        .roster-intro {
+            position: relative;
+            max-width: 900px;
+            margin: 30px auto 10px;
+            aspect-ratio: 16 / 7; /* plus fin que 16:9 pour rester discret */
+            overflow: hidden;
+            border-radius: 3px;
+            border: 1px solid rgba(112, 0, 255, 0.3);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+        .roster-intro img {
+            width: 100%; height: 100%;
+            object-fit: cover; object-position: center 35%;
+            display: block;
+            filter: saturate(1.05);
+        }
+        /* Fade top+bottom pour fondre avec le fond du site */
+        .roster-intro::before {
+            content: '';
+            position: absolute; inset: 0;
+            background:
+                linear-gradient(to bottom,
+                    rgba(10, 10, 12, 0.4) 0%,
+                    rgba(10, 10, 12, 0) 30%,
+                    rgba(10, 10, 12, 0) 70%,
+                    rgba(10, 10, 12, 0.8) 100%);
+            pointer-events: none;
+        }
+        .roster-intro::after {
+            content: '// ROSTER INDEX — HETHEREAU';
+            position: absolute;
+            bottom: 12px; left: 20px;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.65rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+
+        /* --- CARTES D'AFFILIATION (click to reveal) --- */
+        .faction-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin: 40px 0 30px;
+        }
+        .faction-card {
+            position: relative;
+            padding: 25px 20px;
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--ring1);
+            cursor: pointer;
+            transition: 0.3s;
+            font-family: 'Orbitron', sans-serif;
+            text-align: left;
+            color: inherit;
+            overflow: hidden;
+        }
+        .faction-card::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, transparent 60%, rgba(0, 242, 255, 0.05) 100%);
+            pointer-events: none;
+        }
+        .faction-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--core);
+            border-left-color: var(--core);
+            box-shadow: 0 10px 25px rgba(0, 242, 255, 0.15);
+        }
+        .faction-card.active {
+            border-color: var(--ring2);
+            border-left-color: var(--ring2);
+            box-shadow: 0 0 20px rgba(255, 0, 122, 0.3);
+        }
+        .faction-card .faction-label {
+            font-size: 0.55rem; letter-spacing: 3px;
+            color: var(--core); margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .faction-card.active .faction-label { color: var(--ring2); }
+        .faction-card .faction-name {
+            color: white; font-size: 1rem; font-weight: 700;
+            letter-spacing: 2px; text-transform: uppercase;
+            margin-bottom: 12px; line-height: 1.3;
+        }
+        .faction-card .faction-count {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.7rem; color: #aaa;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .faction-card .faction-count strong { color: var(--core); }
+        .faction-card.active .faction-count strong { color: var(--ring2); }
+        .faction-card .faction-chevron {
+            font-size: 0.8rem; color: #555;
+            transition: transform 0.3s;
+        }
+        .faction-card.active .faction-chevron {
+            color: var(--ring2);
+            transform: rotate(180deg);
+        }
+
+        /* Couleurs spécifiques par faction (border-left uniquement) */
+        .faction-card[data-faction="protagoniste"] { border-left-color: #ffd700; }
+        .faction-card[data-faction="protagoniste"] .faction-label { color: #ffd700; }
+        .faction-card[data-faction="bureau"]       { border-left-color: #00f2ff; }
+        .faction-card[data-faction="sterry"]       { border-left-color: #39ff14; }
+        .faction-card[data-faction="eibon"]        { border-left-color: #7000ff; }
+        .faction-card[data-faction="bank"]         { border-left-color: #ffb300; }
+
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 22px;
+            margin-top: 30px;
+        }
+        /* Grille cachée par défaut, révélée quand .revealed est ajouté */
+        .character-grid.hidden { display: none; }
+
+        .grid-header {
+            display: flex; align-items: center; gap: 15px;
+            margin-top: 40px; padding: 15px 20px;
+            background: rgba(255, 0, 122, 0.05);
+            border-left: 3px solid var(--ring2);
+            font-size: 0.75rem; letter-spacing: 2px;
+        }
+        .grid-header.hidden { display: none; }
+        .grid-header .current-faction { color: var(--ring2); text-transform: uppercase; font-weight: 700; }
+        .grid-header .close-btn {
+            margin-left: auto;
+            background: transparent; border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #aaa; padding: 5px 12px; cursor: pointer;
+            font-family: 'Orbitron', sans-serif; font-size: 0.65rem;
+            letter-spacing: 1px; transition: 0.3s;
+        }
+        .grid-header .close-btn:hover { border-color: var(--ring2); color: var(--ring2); }
+        .char-card {
+            position: relative;
+            border-radius: 4px; aspect-ratio: 3 / 5;
+            background: transparent;
+            transition: 0.3s;
+            cursor: pointer;
+            perspective: 1200px;
+        }
+        .char-card-inner {
+            position: relative;
+            width: 100%; height: 100%;
+            transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .char-card.flipped .char-card-inner {
+            transform: rotateY(180deg);
+        }
+        .char-card-front,
+        .char-card-back {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #0c0c10;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .char-card-back {
+            transform: rotateY(180deg);
+            padding: 24px 22px;
+            display: flex; flex-direction: column;
+            background: linear-gradient(165deg, #16161a 0%, #0c0c10 70%, #16161a 100%);
+            color: #ddd;
+        }
+        .char-card-back::before {
+            content: '';
+            position: absolute; inset: 0;
+            background:
+                radial-gradient(circle at 20% 10%, rgba(0, 242, 255, 0.08) 0%, transparent 50%),
+                repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(255, 255, 255, 0.015) 2px, rgba(255, 255, 255, 0.015) 3px);
+            pointer-events: none;
+        }
+        .char-card-back .back-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 12px; margin-bottom: 15px;
+            position: relative; z-index: 1;
+        }
+        .char-card-back .back-name {
+            color: white; font-size: 1.25rem; font-weight: 900;
+            letter-spacing: 2.5px; text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .char-card-back .back-faction {
+            color: var(--core); font-size: 0.65rem;
+            letter-spacing: 2.2px; text-transform: uppercase;
+        }
+        .char-card-back .back-stats {
+            display: flex; flex-direction: column; gap: 7px;
+            font-size: 0.75rem; margin-bottom: 15px;
+            position: relative; z-index: 1;
+        }
+        .char-card-back .back-stats .stat-row {
+            display: flex; justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+        }
+        .char-card-back .back-stats .stat-label {
+            color: #777; letter-spacing: 1.8px; text-transform: uppercase;
+            font-size: 0.62rem;
+        }
+        .char-card-back .back-stats .stat-value {
+            color: #fff; font-weight: 700; text-align: right;
+            font-size: 0.75rem;
+        }
+        .char-card-back .back-desc {
+            color: #bbb; font-size: 0.82rem; line-height: 1.55;
+            flex: 1; overflow-y: auto;
+            position: relative; z-index: 1;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .char-card-back .back-quote {
+            border-left: 2px solid var(--ring2);
+            padding: 8px 12px; margin-top: 12px;
+            font-style: italic; color: #ccc;
+            font-size: 0.75rem; line-height: 1.5;
+            background: rgba(255, 0, 122, 0.05);
+            position: relative; z-index: 1;
+        }
+        .char-card-back .flip-hint {
+            position: absolute; bottom: 10px; right: 14px;
+            font-size: 0.58rem; color: #555;
+            letter-spacing: 1.2px; z-index: 2;
+        }
+        .char-card-front img {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        .char-card:hover:not(.flipped) .char-card-inner {
+            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.3);
+        }
+        .char-card:hover:not(.flipped) .char-card-front {
+            border-color: var(--core);
+        }
+        .char-card:hover:not(.flipped) .char-card-front img { transform: scale(1.05); }
+        .char-card .char-overlay {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 18px 15px 15px;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.95));
+            pointer-events: none;
+        }
+        .char-card .char-name {
+            color: white; font-size: 1.15rem; font-weight: 900;
+            letter-spacing: 2.2px; text-transform: uppercase;
+        }
+        .char-card .char-faction {
+            color: var(--core); font-size: 0.68rem;
+            letter-spacing: 1.8px; margin-top: 4px;
+        }
+        .char-card.rank-s .char-faction { color: var(--ring2); }
+        .char-card.rank-protagonist .char-faction { color: #ffd700; }
+        .char-card.rank-protagonist .char-card-front {
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+        .char-card.rank-protagonist:hover:not(.flipped) .char-card-inner {
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.35);
+        }
+        .char-card.rank-protagonist:hover:not(.flipped) .char-card-front {
+            border-color: #ffd700;
+        }
+        .char-card.rank-s::before {
+            content: 'S'; position: absolute; top: 10px; right: 10px;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--ring2); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 0.95rem; z-index: 2;
+            box-shadow: 0 0 10px rgba(255, 0, 122, 0.6);
+        }
+        .char-card.rank-a::before {
+            content: 'A'; position: absolute; top: 10px; right: 10px;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: var(--ring1); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 0.95rem; z-index: 2;
+            box-shadow: 0 0 10px rgba(112, 0, 255, 0.6);
+        }
+        .char-card.rank-protagonist::before {
+            content: 'Z'; position: absolute; top: 10px; right: 10px;
+            width: 30px; height: 30px; border-radius: 50%;
+            background: linear-gradient(135deg, #ffd700, #ff9500);
+            color: black;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 0.95rem; z-index: 2;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+        }
+
+        /* Pastille d'attribut (top-left de la card) */
+        .char-card .char-attribute {
+            position: absolute; top: 10px; left: 10px;
+            padding: 4px 10px; border-radius: 2px;
+            font-size: 0.65rem; letter-spacing: 1.8px;
+            font-weight: 700; text-transform: uppercase;
+            z-index: 2; color: white;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+        }
+        .attr-incantation { background: rgba(255, 50, 80, 0.85); }
+        .attr-cosmos      { background: rgba(60, 180, 90, 0.85); }
+        .attr-chaos       { background: rgba(120, 40, 180, 0.85); }
+        .attr-psyche      { background: rgba(40, 150, 220, 0.85); }
+        .attr-anima       { background: rgba(50, 200, 160, 0.85); }
+        .attr-lakshana    { background: rgba(230, 190, 40, 0.85); color: #1a1a1a; }
+
+        /* --- PARALLAX --- */
+        .parallax {
+            min-height: 400px; background-image: url('slide4.jpg');
+            background-attachment: fixed; background-size: cover; background-position: center;
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            padding: 60px 20px;
+        }
+        .parallax-text {
+            background: rgba(10, 10, 12, 0.7); padding: 30px; border: 1px solid var(--core);
+            max-width: 700px;
+        }
+        .parallax-text h2 { color: var(--core); letter-spacing: 3px; margin-bottom: 15px; }
+
+        /* --- TABLEAU CONFIG --- */
+        .config-table { width: 100%; border-collapse: collapse; background: var(--card-bg); margin-top: 20px; }
+        .config-table th, .config-table td { padding: 15px; text-align: left; border-bottom: 1px solid #222; font-size: 0.9rem; }
+        .config-table th { background: var(--ring1); color: white; text-transform: uppercase; }
+
+        /* --- BANNIÈRE CNY (pleine largeur) --- */
+        .cny-banner {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            border-top: 2px solid var(--ring2);
+            border-bottom: 2px solid var(--ring2);
+        }
+        .cny-banner img {
+            width: 100%; display: block;
+            transition: transform 1.2s ease;
+        }
+        .cny-banner:hover img { transform: scale(1.03); }
+        .cny-banner .cny-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(
+                to right,
+                rgba(10, 10, 12, 0.6) 0%,
+                rgba(10, 10, 12, 0.1) 40%,
+                rgba(10, 10, 12, 0.1) 60%,
+                rgba(10, 10, 12, 0.6) 100%
+            );
+            display: flex; align-items: flex-end; justify-content: center;
+            pointer-events: none;
+            padding: 40px 20px;
+        }
+        .cny-banner .cny-text {
+            text-align: center;
+            background: rgba(10, 10, 12, 0.75);
+            padding: 15px 30px;
+            border: 1px solid var(--ring2);
+            backdrop-filter: blur(4px);
+        }
+        .cny-banner .cny-text h2 {
+            color: var(--ring2);
+            font-size: clamp(1rem, 2vw, 1.4rem);
+            letter-spacing: 4px;
+            margin-bottom: 5px;
+        }
+        .cny-banner .cny-text p {
+            color: #ccc;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+        }
+
+        /* --- GAMEPLAY SECTION (cadre moniteur Hethereau) --- */
+        .gameplay-monitor {
+            margin: 40px auto 0;
+            max-width: 900px; /* On cap la largeur pour respecter la résolution native 1280px */
+            position: relative;
+            background: #0a0a0c;
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            border-radius: 6px;
+            padding: 12px;
+            box-shadow:
+                0 0 0 1px rgba(0, 242, 255, 0.15),
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                inset 0 0 30px rgba(0, 242, 255, 0.05);
+        }
+        .gameplay-monitor::before {
+            content: '// COFY-TEST VERSION // HETHEREAU NIGHT MODE';
+            position: absolute;
+            top: -10px; left: 20px;
+            background: var(--dark);
+            color: var(--core);
+            padding: 2px 10px;
+            font-size: 0.55rem;
+            letter-spacing: 2px;
+            border: 1px solid rgba(0, 242, 255, 0.3);
+        }
+        .gameplay-monitor::after {
+            content: '● REC';
+            position: absolute;
+            top: -10px; right: 20px;
+            background: var(--dark);
+            color: #ff3b30;
+            padding: 2px 10px;
+            font-size: 0.55rem;
+            letter-spacing: 2px;
+            border: 1px solid rgba(255, 59, 48, 0.4);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .gameplay-monitor .monitor-screen {
+            position: relative;
+            overflow: hidden;
+            border-radius: 3px;
+            aspect-ratio: 16 / 9;
+        }
+        .gameplay-monitor .monitor-screen img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+            /* Léger filtre pour unifier avec l'ambiance cyber du site */
+            filter: saturate(1.1) contrast(1.05);
+        }
+        /* Scanlines subtiles façon CRT */
+        .gameplay-monitor .monitor-screen::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0) 0px,
+                rgba(0, 0, 0, 0) 2px,
+                rgba(0, 0, 0, 0.08) 2px,
+                rgba(0, 0, 0, 0.08) 3px
+            );
+            pointer-events: none;
+        }
+        .gameplay-monitor .monitor-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 10px;
+            font-size: 0.6rem; letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+        .gameplay-monitor .monitor-footer .coord { color: var(--core); }
+
+        /* --- ANCIEN gameplay-preview (supprimé du flux mais on garde la classe au cas où) --- */
+        .gameplay-preview {
+            margin-top: 40px; width: 100%; border-radius: 4px; border: 1px solid var(--core);
+        }
+
+        /* --- SECTION ACTIVITÉS EN JEU --- */
+        .activities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+        .activity-card {
+            position: relative; overflow: hidden; border-radius: 4px;
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.3s;
+        }
+        .activity-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--ring3);
+            box-shadow: 0 10px 30px rgba(57, 255, 20, 0.2);
+        }
+        .activity-card .activity-img {
+            width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+            display: block;
+        }
+        .activity-card .activity-info {
+            padding: 18px 20px;
+        }
+        .activity-card .activity-tag {
+            display: inline-block; font-size: 0.6rem; letter-spacing: 2px;
+            color: var(--ring3); border: 1px solid var(--ring3);
+            padding: 2px 8px; margin-bottom: 10px; text-transform: uppercase;
+        }
+        .activity-card h3 {
+            color: white; font-size: 1.1rem; letter-spacing: 2px;
+            margin-bottom: 8px; text-transform: uppercase;
+        }
+        .activity-card p {
+            color: #aaa; font-size: 0.85rem; line-height: 1.5;
+        }
+
+        /* --- SECTION BANNIÈRES --- */
+        .banners-section { background: #0f0f12; }
+        .banner-intro {
+            text-align: center; max-width: 700px; margin: 0 auto 40px;
+            color: #bbb; font-size: 0.9rem;
+        }
+        .banners-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+        }
+        .banner-card {
+            position: relative; overflow: hidden;
+            border-radius: 4px; background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.3s;
+        }
+        .banner-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--ring2);
+            box-shadow: 0 10px 30px rgba(255, 0, 122, 0.25);
+        }
+        .banner-card .banner-img {
+            width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+            display: block; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .banner-card .banner-info { padding: 20px; }
+        .banner-card .banner-type {
+            display: inline-block; font-size: 0.6rem; letter-spacing: 2px;
+            padding: 3px 10px; margin-bottom: 10px; text-transform: uppercase;
+            font-weight: 700;
+        }
+        .banner-card.limited .banner-type {
+            background: var(--ring2); color: white;
+        }
+        .banner-card.standard .banner-type {
+            background: var(--core); color: black;
+        }
+        .banner-card.selector .banner-type {
+            background: var(--ring1); color: white;
+        }
+        .banner-card h3 {
+            color: white; font-size: 1.15rem; letter-spacing: 2px;
+            margin-bottom: 10px; text-transform: uppercase;
+        }
+        .banner-card .banner-desc {
+            color: #bbb; font-size: 0.85rem; line-height: 1.5; margin-bottom: 12px;
+        }
+        .banner-card .banner-rates {
+            display: flex; gap: 15px; flex-wrap: wrap;
+            padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.75rem;
+        }
+        .banner-card .banner-rates span { color: #888; }
+        .banner-card .banner-rates strong { color: var(--core); font-weight: 700; }
+
+        footer { text-align: center; padding: 60px 10%; background: #050505; border-top: 2px solid var(--ring2); }
+        .footer-banner { width: 100%; max-width: 800px; border-radius: 4px; margin-bottom: 20px; opacity: 0.85; }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .data-core { width: 280px; height: 280px; }
+            .main-timer { font-size: 2.2rem; }
+            .preload-bar { font-size: 0.65rem; padding: 8px 14px; gap: 10px; }
+            section { padding: 60px 5%; }
+            .character-showcase { grid-template-columns: 1fr; }
+            .parallax { background-attachment: scroll; }
+            .character-grid { grid-template-columns: 1fr; gap: 20px; }
+            .char-card .char-name { font-size: 1.1rem; }
+            .char-card-back { padding: 24px 20px; }
+            .char-card-back .back-name { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">NTE // SYSTEM</div>
+        <ul class="nav-links">
+            <li><a href="index.html" style="color: var(--ring3);">◄ HETHEREAU 3D</a></li>
+            <li><a href="#accueil">Accueil</a></li>
+            <li><a href="#jeu">Le Jeu</a></li>
+            <li><a href="#activites">Activités</a></li>
+            <li><a href="#bannieres">Bannières</a></li>
+            <li><a href="#perso">Personnages</a></li>
+            <li><a href="#config">Config</a></li>
+        </ul>
+
+        <!-- Audio player minimaliste -->
+        <div class="audio-player" id="audio-player" title="Musique d'ambiance — OST NTE">
+            <span class="player-icon">🎧</span>
+            <button class="play-btn" id="audio-play-btn" aria-label="Lecture / Pause">
+                <span class="icon-play">▶</span>
+                <span class="icon-pause">❚❚</span>
+            </button>
+            <div class="waveform">
+                <span></span><span></span><span></span>
+            </div>
+            <input type="range" class="volume-slider" id="audio-volume-slider"
+                   min="0" max="1" step="0.01" value="0.05"
+                   aria-label="Volume">
+            <audio id="audio-element" loop preload="none">
+                <source src="Neverness_to_Everness__Main_Theme.mp3" type="audio/mpeg">
+            </audio>
+        </div>
+    </nav>
+
+    <header class="hero" id="accueil">
+        <p class="hero-subtitle">[ ACCÈS SERVEUR HETHEREAU AUTORISÉ ]</p>
+        <h1>NEVERNESS TO EVERNESS</h1>
+
+        <div class="counter-block" id="launch-block">
+            <div class="counter-label primary">// LANCEMENT OFFICIEL &mdash; 29.04</div>
+            <div class="data-core">
+                <svg viewBox="0 0 220 220">
+                    <circle class="ring-bg" cx="110" cy="110" r="100"></circle>
+                    <circle id="ring-sec" class="ring" cx="110" cy="110" r="100" stroke="var(--ring3)" stroke-dasharray="628" stroke-dashoffset="628"></circle>
+                    <circle class="ring-bg" cx="110" cy="110" r="85"></circle>
+                    <circle id="ring-min" class="ring" cx="110" cy="110" r="85" stroke="var(--ring2)" stroke-dasharray="534" stroke-dashoffset="534"></circle>
+                    <circle class="ring-bg" cx="110" cy="110" r="70"></circle>
+                    <circle id="ring-hours" class="ring" cx="110" cy="110" r="70" stroke="var(--ring1)" stroke-dasharray="440" stroke-dashoffset="440"></circle>
+                </svg>
+                <div class="core-info">
+                    <div id="big-timer" class="main-timer">00:00</div>
+                    <div id="day-counter" class="sub-data">-- JOURS</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="preload-bar" id="preload-bar">
+            <span class="dot"></span>
+            <span class="label">Pré-chargement 27.04</span>
+            <span class="separator">//</span>
+            <span class="value" id="preload-value">-- J : --H : --M : --S</span>
+        </div>
+
+        <div class="btn-group">
+            <a href="https://nte.perfectworld.com/fr/" target="_blank" rel="noopener" class="btn"><i class="fas fa-globe"></i> Site Officiel</a>
+            <a href="https://x.com/intent/user?screen_name=NTE_GL&utm=officialEN" target="_blank" rel="noopener" class="btn magenta"><i class="fab fa-x-twitter"></i> Protocol X</a>
+            <a href="https://discord.com/invite/DfCgSpc8ez?utm=officialEN" target="_blank" rel="noopener" class="btn discord"><i class="fab fa-discord"></i> Discord</a>
+        </div>
+    </header>
+
+    <section id="jeu">
+        <h2 class="section-title">Analyse des Anomalies</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>Monde Ouvert</h3>
+                <p>Une liberté totale dans une métropole surnaturelle. Achetez, conduisez et explorez sans limites.</p>
+            </div>
+            <div class="card">
+                <h3>Système Esper</h3>
+                <p>Maîtrisez des pouvoirs hors du commun pour stabiliser les failles de la réalité.</p>
+            </div>
+            <div class="card" style="border-left-color: var(--ring3);">
+                <h3>Unreal Engine 5</h3>
+                <p>Une expérience PC next-gen avec Ray Tracing et une métropole plus vraie que nature.</p>
+            </div>
+        </div>
+        <div class="gameplay-monitor">
+            <div class="monitor-screen">
+                <img src="hq720-gameplay.jpg" alt="Aperçu gameplay NTE" loading="lazy">
+            </div>
+            <div class="monitor-footer">
+                <span><span class="coord">◉</span> CAM_01 / HETHEREAU_NIGHT</span>
+                <span>UID: 214177A7A55 — CO-FY TEST BUILD</span>
+            </div>
+        </div>
+        <p style="margin-top: 30px; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;">
+            <strong>Neverness to Everness (NTE)</strong> est bien plus qu'un jeu d'action. C'est une simulation de vie urbaine où le paranormal s'invite à chaque coin de rue. Préparez-vous à chasser les anomalies dès le 29 avril.
+        </p>
+    </section>
+
+    <div class="parallax">
+        <div class="parallax-text">
+            <h2>SOUS UN CIEL DE COMÈTES</h2>
+            <p>Entre Hethereau et les champs silencieux, chaque nuit cache un fragment d'Everness à découvrir.</p>
+        </div>
+    </div>
+
+    <section id="activites">
+        <h2 class="section-title">Activités en Jeu</h2>
+        <p style="text-align: center; max-width: 700px; margin: 0 auto; color: #bbb; font-size: 0.9rem;">
+            Entre deux chasses aux anomalies, Hethereau regorge de distractions. Une vraie ville, une vraie vie urbaine.
+        </p>
+        <div class="activities-grid">
+            <div class="activity-card">
+                <img src="Fishing.webp" alt="Pêche" class="activity-img" loading="lazy">
+                <div class="activity-info">
+                    <span class="activity-tag">Détente</span>
+                    <h3>Pêche</h3>
+                    <p>Posez votre canne au bord des rivières de la métropole. Endurance du poisson, gestion de la ligne — chaque prise compte.</p>
+                </div>
+            </div>
+            <div class="activity-card">
+                <img src="Arcade_Tetris.webp" alt="Arcade Tetris" class="activity-img" loading="lazy">
+                <div class="activity-info">
+                    <span class="activity-tag">Arcade</span>
+                    <h3>Tetrominoes</h3>
+                    <p>Borne d'arcade rétro dans les salles de jeu d'Hethereau. Affrontez d'autres joueurs, grimpez dans les scores.</p>
+                </div>
+            </div>
+            <div class="activity-card">
+                <img src="Mahjong.webp" alt="Mahjong" class="activity-img" loading="lazy">
+                <div class="activity-info">
+                    <span class="activity-tag">Stratégie</span>
+                    <h3>Mahjong</h3>
+                    <p>Partie de mahjong traditionnel à quatre joueurs. Misez vos jetons, lisez vos adversaires, remportez le pot.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="bannieres" class="banners-section">
+        <h2 class="section-title">Bannières de Tirage</h2>
+        <p class="banner-intro">
+            Recrutez vos agents via le système "Fair". Bannières limitées, permanentes, et sélections garanties après un certain nombre de tirages.
+        </p>
+        <div class="banners-grid">
+            <div class="banner-card limited">
+                <img src="Limited_banner_Nanally.webp" alt="Bannière limitée Nanally" class="banner-img" loading="lazy">
+                <div class="banner-info">
+                    <span class="banner-type">// Limitée</span>
+                    <h3>The Ichi-daime &mdash; Nanally</h3>
+                    <p class="banner-desc">Bannière événementielle avec Nanally en S-Class garantie. Personnages A-Class en vedette disponibles uniquement pendant l'événement.</p>
+                    <div class="banner-rates">
+                        <span>S-Class garantie : <strong>90 tirages</strong></span>
+                        <span>A-Class : <strong>10 tirages</strong></span>
+                    </div>
+                </div>
+            </div>
+            <div class="banner-card standard">
+                <img src="Standard_Banner.webp" alt="Bannière Strange Encounters" class="banner-img" loading="lazy">
+                <div class="banner-info">
+                    <span class="banner-type">// Permanente</span>
+                    <h3>Strange Encounters</h3>
+                    <p class="banner-desc">La bannière standard qui tourne en permanence. Roster étendu avec Daffodill, Sakiri et Jiuyuan parmi les S-Class potentielles.</p>
+                    <div class="banner-rates">
+                        <span>S-Class garantie : <strong>90 tirages</strong></span>
+                        <span>Sélection S : <strong>50 tirages</strong></span>
+                    </div>
+                </div>
+            </div>
+            <div class="banner-card selector">
+                <img src="Strange_encounters_S_Class_Selection.webp" alt="S-Class Selection" class="banner-img" loading="lazy">
+                <div class="banner-info">
+                    <span class="banner-type">// Sélection Garantie</span>
+                    <h3>S-Class Selection</h3>
+                    <p class="banner-desc">Après 50 tirages sur la bannière permanente, choisissez manuellement votre personnage S-Class parmi le roster disponible.</p>
+                    <div class="banner-rates">
+                        <span>Débloqué à : <strong>50/50 rolls</strong></span>
+                        <span>Choix parmi : <strong>7 S-Class</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="cny-banner">
+        <img src="CNY_2026.webp" alt="Nouvel An Chinois 2026 - NTE" loading="lazy">
+        <div class="cny-overlay">
+            <div class="cny-text">
+                <h2>CÉLÉBRATION CNY 2026</h2>
+                <p>// Hethereau accueille la nouvelle année</p>
+            </div>
+        </div>
+    </div>
+
+    <section id="perso">
+        <h2 class="section-title">Dossier Personnages</h2>
+        <p style="text-align: center; max-width: 700px; margin: 0 auto; color: #bbb; font-size: 0.9rem;">
+            Les agents de Hethereau, classés par affiliation. Chaque opérateur possède ses propres capacités Esper et sa propre histoire.
+        </p>
+
+        <div class="roster-intro">
+            <img src="hq720.jpg" alt="Roster NTE — Hethereau" loading="lazy">
+        </div>
+
+        <div class="faction-cards">
+            <button class="faction-card" data-faction="protagoniste">
+                <div class="faction-label">// MAIN</div>
+                <div class="faction-name">Protagoniste</div>
+                <div class="faction-count"><span><strong>2</strong> personnages</span><span class="faction-chevron">▼</span></div>
+            </button>
+            <button class="faction-card" data-faction="bureau">
+                <div class="faction-label">// DIVISION A</div>
+                <div class="faction-name">Bureau of Anomaly Control</div>
+                <div class="faction-count"><span><strong>5</strong> personnages</span><span class="faction-chevron">▼</span></div>
+            </button>
+            <button class="faction-card" data-faction="sterry">
+                <div class="faction-label">// DIVISION B</div>
+                <div class="faction-name">Sterry Express</div>
+                <div class="faction-count"><span><strong>3</strong> personnages</span><span class="faction-chevron">▼</span></div>
+            </button>
+            <button class="faction-card" data-faction="eibon">
+                <div class="faction-label">// DIVISION C</div>
+                <div class="faction-name">Eibon Antique Shop</div>
+                <div class="faction-count"><span><strong>6</strong> personnages</span><span class="faction-chevron">▼</span></div>
+            </button>
+            <button class="faction-card" data-faction="bank">
+                <div class="faction-label">// DIVISION D</div>
+                <div class="faction-name">Unnamed Bank</div>
+                <div class="faction-count"><span><strong>1</strong> personnage</span><span class="faction-chevron">▼</span></div>
+            </button>
+        </div>
+
+        <div class="grid-header hidden" id="grid-header">
+            <span>// DOSSIER OUVERT &mdash;</span>
+            <span class="current-faction" id="current-faction"></span>
+            <button class="close-btn" id="close-grid">✕ FERMER</button>
+        </div>
+
+        <div class="character-grid hidden" id="character-grid">
+            <!-- PROTAGONISTES (Zero) -->
+            <div class="char-card rank-protagonist" data-faction="protagoniste">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-cosmos">Cosmos</span>
+                        <img src="Esper_zero_female_artwork.webp" alt="Zero (Féminin)" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Zero ♀</div><div class="char-faction">Protagoniste</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Zero ♀</div>
+                            <div class="back-faction">Protagoniste</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">Protagoniste</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Cosmos</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Épée</span></div>
+                        </div>
+                        <div class="back-desc">Incarnation féminine du protagoniste. Dotée de la capacité unique d'identifier et d'analyser les anomalies, elle navigue entre factions pour percer les mystères d'Hethereau.</div>
+                    <div class="back-quote">&ldquo;Where will this ability to identify and analyze anomalies lead me?&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-protagonist" data-faction="protagoniste">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-cosmos">Cosmos</span>
+                        <img src="Esper_zero_male_artwork.webp" alt="Zero (Masculin)" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Zero ♂</div><div class="char-faction">Protagoniste</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Zero ♂</div>
+                            <div class="back-faction">Protagoniste</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">Protagoniste</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Cosmos</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Épée</span></div>
+                        </div>
+                        <div class="back-desc">Incarnation masculine du protagoniste. Même capacité rare d'analyse d'anomalies, même destin : résoudre l'énigme qui relie Neverness à Everness.</div>
+                    <div class="back-quote">&ldquo;Where will this ability to identify and analyze anomalies lead me?&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BUREAU OF ANOMALY CONTROL -->
+            <div class="char-card rank-s" data-faction="bureau">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-incantation">Incantation</span>
+                        <img src="Baicang_by_nte_1.webp" alt="Baicang" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Baicang</div><div class="char-faction">Bureau of Anomaly Control</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Baicang</div>
+                            <div class="back-faction">Bureau of Anomaly Control</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Incantation</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Power of Words</span></div>
+                        </div>
+                        <div class="back-desc">Capitaine de l'unité ETD-4. Charisme posé, autorité naturelle. Manie la puissance du verbe pour neutraliser les anomalies les plus récalcitrantes.</div>
+                    <div class="back-quote">&ldquo;This is the Captain of ETD-4. Let's get along.&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-s" data-faction="bureau">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-psyche">Psyche</span>
+                        <img src="Fadia_nte_1.webp" alt="Fadia" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Fadia</div><div class="char-faction">Bureau of Anomaly Control</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Fadia</div>
+                            <div class="back-faction">Bureau of Anomaly Control</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Psyche</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Transforming Cross-Shield</span></div>
+                        </div>
+                        <div class="back-desc">Agent imprévisible au sourire provocateur. Son bouclier-lame transformable lui permet d'alterner offensive et défense sans transition. Mieux vaut ne pas l'oublier.</div>
+                    <div class="back-quote">&ldquo;Better remember me from now, or you will know...&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-s" data-faction="bureau">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-chaos">Chaos</span>
+                        <img src="Lacrimosa_-_Character_Showcase.webp" alt="Lacrimosa" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Lacrimosa</div><div class="char-faction">Bureau of Anomaly Control</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Lacrimosa</div>
+                            <div class="back-faction">Bureau of Anomaly Control</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Chaos</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Esper Constructs</span></div>
+                        </div>
+                        <div class="back-desc">Âme mélancolique obsédée par les tomates. Ses constructs Esper prennent des formes imprévisibles, à l'image de son esprit dissocié.</div>
+                    <div class="back-quote">&ldquo;Tomatoes... Lacrimosa like tomatoes...&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-a" data-faction="bureau">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-anima">Anima</span>
+                        <img src="Mint_by_nte_1.webp" alt="Mint" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Mint</div><div class="char-faction">Bureau of Anomaly Control</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Mint</div>
+                            <div class="back-faction">Bureau of Anomaly Control</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">A-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Anima</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Dual Blades</span></div>
+                        </div>
+                        <div class="back-desc">Recrue enthousiaste aux oreilles félines. Ses doubles lames tranchent vite, son énergie est contagieuse. Toujours partante pour aider.</div>
+                    <div class="back-quote">&ldquo;Woohoo, I'm here and always ready to help!&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-a" data-faction="bureau">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-lakshana">Lakshana</span>
+                        <img src="Skia_by_nte_1.webp" alt="Skia" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Skia</div><div class="char-faction">Bureau of Anomaly Control</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Skia</div>
+                            <div class="back-faction">Bureau of Anomaly Control</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">A-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Lakshana</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Shadow Manipulation</span></div>
+                        </div>
+                        <div class="back-desc">Agent canin à l'allure stricte et au verbe économe. Maîtrise l'ombre comme une arme. Méticuleux, discipliné, absolument fiable.</div>
+                    <div class="back-quote">&ldquo;Good. Everything is in order.&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STERRY EXPRESS -->
+            <div class="char-card rank-s" data-faction="sterry">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-lakshana">Lakshana</span>
+                        <img src="Hathor_by_nte_1.webp" alt="Hathor" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Hathor</div><div class="char-faction">Sterry Express</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Hathor</div>
+                            <div class="back-faction">Sterry Express</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Lakshana</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Blade Wings</span></div>
+                        </div>
+                        <div class="back-desc">Livreuse angélique de Sterry Express. Ses ailes-lames coupent le ciel d'Hethereau pour livrer dans les délais. Le devoir avant tout.</div>
+                    <div class="back-quote">&ldquo;Since you chose Sterry... Delivering on time is only my duty.&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-s" data-faction="sterry">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-anima">Anima</span>
+                        <img src="Jiuyuan_nte_1.webp" alt="Jiuyuan" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Jiuyuan</div><div class="char-faction">Sterry Express</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Jiuyuan</div>
+                            <div class="back-faction">Sterry Express</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Anima</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Arme classée</span></div>
+                        </div>
+                        <div class="back-desc">Élégante figure de Sterry Express au chapeau ombrageux. Son sourire cache plus qu'il n'en dit. La convoitise attire, mais elle peut aussi engloutir.</div>
+                    <div class="back-quote">&ldquo;Greed will make you sink deeper into the mire.&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-a" data-faction="sterry">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-psyche">Psyche</span>
+                        <img src="Haniel_by_nte_1.webp" alt="Haniel" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Haniel</div><div class="char-faction">Sterry Express</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Haniel</div>
+                            <div class="back-faction">Sterry Express</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">A-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Psyche</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Arme classée</span></div>
+                        </div>
+                        <div class="back-desc">Messagère énergique et pop de Sterry. Casque vissé sur les oreilles, toujours prête à répondre à l'appel. Le son est son élément.</div>
+                    <div class="back-quote">&ldquo;If you call, I'll be there to answer!&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EIBON ANTIQUE SHOP -->
+            <div class="char-card rank-s" data-faction="eibon">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-chaos">Chaos</span>
+                        <img src="Daffodill_by_nte_1.webp" alt="Daffodill" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Daffodill</div><div class="char-faction">Eibon Antique Shop</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Daffodill</div>
+                            <div class="back-faction">Eibon Antique Shop</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Chaos</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Arme classée</span></div>
+                        </div>
+                        <div class="back-desc">Bretteuse silencieuse aux mèches bleues. Économie de mots, précision chirurgicale. Accepte n'importe quel contrat, sans poser de questions.</div>
+                    <div class="back-quote">&ldquo;Leave it to me.&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-s" data-faction="eibon">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-cosmos">Cosmos</span>
+                        <img src="Hotori_Splashart.webp" alt="Hotori" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Hotori</div><div class="char-faction">Eibon Antique Shop</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Hotori</div>
+                            <div class="back-faction">Eibon Antique Shop</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Cosmos</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Umbrella Katana</span></div>
+                        </div>
+                        <div class="back-desc">Guerrière en kimono, ombrelle à la main et katana à la ceinture. Élégance traditionnelle et précision de samouraï pour défendre Eibon.</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-s" data-faction="eibon">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-anima">Anima</span>
+                        <img src="Nanally_-_Character_Showcase.webp" alt="Nanally" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Nanally</div><div class="char-faction">Eibon Antique Shop</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Nanally</div>
+                            <div class="back-faction">Eibon Antique Shop</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Anima</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Fangs and Claws</span></div>
+                        </div>
+                        <div class="back-desc">Membre du trio Coluccis, insolence féline et crocs affûtés. Issue du quartier Silvermine, elle frappe vite et annule le mal avec style.</div>
+                    <div class="back-quote">&ldquo;Ta-da — The righteous 'Coluccis' trio is here, ready to strike and nullify the evil!&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-s" data-faction="eibon">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-incantation">Incantation</span>
+                        <img src="Sakiri_nte_1.webp" alt="Sakiri" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Sakiri</div><div class="char-faction">Eibon Antique Shop</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Sakiri</div>
+                            <div class="back-faction">Eibon Antique Shop</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Incantation</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Kiroumaru</span></div>
+                        </div>
+                        <div class="back-desc">Petite démone en casquette avec son familier monstrueux Kiroumaru. Gourmande et grognon, elle protège férocement ses sanctuaires.</div>
+                    <div class="back-quote">&ldquo;DO NOT open the third shelf of the refrigerator! NO!&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-a" data-faction="eibon">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-incantation">Incantation</span>
+                        <img src="Adler_by_nte_1.webp" alt="Adler" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Adler</div><div class="char-faction">Eibon Antique Shop</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Adler</div>
+                            <div class="back-faction">Eibon Antique Shop</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">A-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Incantation</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Cane Sword and Sunyas</span></div>
+                        </div>
+                        <div class="back-desc">Maître d'hôtel raffiné d'Eibon, canne-épée à la main. Courtoisie impeccable, service irréprochable. Toujours à votre disposition.</div>
+                    <div class="back-quote">&ldquo;If you need anything, let me know. I'm at your service.&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char-card rank-a" data-faction="eibon">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-cosmos">Cosmos</span>
+                        <img src="Edgar_nte_1.webp" alt="Edgar" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Edgar</div><div class="char-faction">Eibon Antique Shop</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Edgar</div>
+                            <div class="back-faction">Eibon Antique Shop</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">A-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Cosmos</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Arme classée</span></div>
+                        </div>
+                        <div class="back-desc">Jeune apprenti érudit aux cheveux bleus. Toujours un livre à portée, toujours une solution en tête. Se propose volontiers.</div>
+                    <div class="back-quote">&ldquo;Are you in a quagmire? Let me assist you.&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UNNAMED BANK -->
+            <div class="char-card rank-s" data-faction="bank">
+                <div class="char-card-inner">
+                    <div class="char-card-front">
+                        <span class="char-attribute attr-cosmos">Cosmos</span>
+                        <img src="Chiz_by_nte_1.webp" alt="Chiz" loading="lazy">
+                        <div class="char-overlay"><div class="char-name">Chiz</div><div class="char-faction">Unnamed Bank</div></div>
+                    </div>
+                    <div class="char-card-back">
+                        <div class="back-header">
+                            <div class="back-name">Chiz</div>
+                            <div class="back-faction">Unnamed Bank</div>
+                        </div>
+                        <div class="back-stats">
+                            <div class="stat-row"><span class="stat-label">Rang</span><span class="stat-value">S-Class</span></div>
+                            <div class="stat-row"><span class="stat-label">Attribut</span><span class="stat-value">Cosmos</span></div>
+                            <div class="stat-row"><span class="stat-label">Arme</span><span class="stat-value">Yokai Hammer</span></div>
+                        </div>
+                        <div class="back-desc">Figure rose et duveteuse de l'Unnamed Bank. Son marteau yokai est plus lourd qu'il n'y paraît. Prête, un peu nerveuse, mais prête.</div>
+                    <div class="back-quote">&ldquo;I... I'm ready!&rdquo;</div>
+                        <span class="flip-hint">↻ CLIQUER POUR RETOURNER</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </section>
+
+    <section id="config" style="background: #0f0f12;">
+        <h2 class="section-title">Spécifications PC</h2>
+        <table class="config-table">
+            <thead>
+                <tr><th>Composant</th><th>Minimum</th><th>Recommandée</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>CPU</td><td>i5-8400 / Ryzen 5 2600</td><td>i7-10700K / Ryzen 7 5800X</td></tr>
+                <tr><td>GPU</td><td>GTX 1060 (6GB)</td><td>RTX 3070 / RX 6800 XT</td></tr>
+                <tr><td>RAM</td><td>16 Go</td><td>32 Go</td></tr>
+                <tr><td>SSD</td><td>100 Go</td><td>100 Go NVMe</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <footer>
+        <img src="neverness-to-everness-new-year.jpg" alt="Footer Banner" class="footer-banner">
+        <p>© 2026 HOTTA STUDIO | PRÉ-CHARGEMENT 27 AVRIL &mdash; SORTIE 29 AVRIL 2026</p>
+        <div class="btn-group" style="margin-top: 20px;">
+            <a href="https://nte.perfectworld.com/fr/" target="_blank" rel="noopener" class="btn" style="font-size: 0.6rem;">Site Officiel</a>
+            <a href="https://x.com/intent/user?screen_name=NTE_GL&utm=officialEN" target="_blank" rel="noopener" class="btn magenta" style="font-size: 0.6rem;">X / Twitter</a>
+            <a href="https://discord.com/invite/DfCgSpc8ez?utm=officialEN" target="_blank" rel="noopener" class="btn discord" style="font-size: 0.6rem;">Discord</a>
+        </div>
+    </footer>
+
+    <script>
+        // --- CONFIGURATION DES DATES ---
+        const preloadDate = new Date("April 27, 2026 04:00:00").getTime();
+        const launchDate  = new Date("April 29, 2026 04:00:00").getTime();
+
+        function pad(n) { return n < 10 ? '0' + n : n; }
+
+        function updateLaunchCore() {
+            const now = new Date().getTime();
+            const diff = launchDate - now;
+            const block = document.getElementById('launch-block');
+
+            if (diff > 0) {
+                block.classList.remove('expired');
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+                document.getElementById('big-timer').innerText  = `${pad(m)}:${pad(s)}`;
+                document.getElementById('day-counter').innerText = `${d} JOURS : ${h}H`;
+
+                document.getElementById('ring-sec').style.strokeDashoffset   = 628 - (s * 628 / 60);
+                document.getElementById('ring-min').style.strokeDashoffset   = 534 - (m * 534 / 60);
+                document.getElementById('ring-hours').style.strokeDashoffset = 440 - (h * 440 / 24);
+            } else {
+                block.classList.add('expired');
+                document.getElementById('big-timer').innerText  = 'ONLINE';
+                document.getElementById('day-counter').innerText = 'ACCÈS OUVERT';
+                document.getElementById('ring-sec').style.strokeDashoffset   = 0;
+                document.getElementById('ring-min').style.strokeDashoffset   = 0;
+                document.getElementById('ring-hours').style.strokeDashoffset = 0;
+            }
+        }
+
+        function updatePreloadBar() {
+            const now = new Date().getTime();
+            const diff = preloadDate - now;
+            const bar = document.getElementById('preload-bar');
+            const value = document.getElementById('preload-value');
+
+            if (diff > 0) {
+                bar.classList.remove('expired');
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+                value.innerText = `${d}J : ${pad(h)}H : ${pad(m)}M : ${pad(s)}S`;
+            } else {
+                bar.classList.add('expired');
+                value.innerText = 'DISPONIBLE';
+            }
+        }
+
+        function updateAll() {
+            updateLaunchCore();
+            updatePreloadBar();
+        }
+
+        setInterval(updateAll, 1000);
+        updateAll();
+
+        // --- FILTRAGE PERSONNAGES PAR AFFILIATION (click to reveal) ---
+        const factionCards = document.querySelectorAll('.faction-card');
+        const charCards    = document.querySelectorAll('.char-card');
+        const charGrid     = document.getElementById('character-grid');
+        const gridHeader   = document.getElementById('grid-header');
+        const currentLabel = document.getElementById('current-faction');
+        const closeBtn     = document.getElementById('close-grid');
+
+        function showFaction(faction, factionName) {
+            // Masquer toutes les cards
+            charCards.forEach(card => {
+                card.style.display = card.dataset.faction === faction ? '' : 'none';
+            });
+            // Révéler la grille et le header
+            charGrid.classList.remove('hidden');
+            gridHeader.classList.remove('hidden');
+            currentLabel.innerText = factionName;
+            // Marquer la carte active
+            factionCards.forEach(fc => fc.classList.toggle('active', fc.dataset.faction === faction));
+            // Scroll doux vers la grille
+            gridHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function hideGrid() {
+            charGrid.classList.add('hidden');
+            gridHeader.classList.add('hidden');
+            factionCards.forEach(fc => fc.classList.remove('active'));
+        }
+
+        factionCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const faction = card.dataset.faction;
+                const name    = card.querySelector('.faction-name').innerText;
+                // Si déjà active → fermer
+                if (card.classList.contains('active')) {
+                    hideGrid();
+                } else {
+                    showFaction(faction, name);
+                }
+            });
+        });
+
+        closeBtn.addEventListener('click', hideGrid);
+
+        // --- FLIP 3D DES CARDS PERSONNAGES ---
+        charCards.forEach(card => {
+            card.addEventListener('click', () => {
+                card.classList.toggle('flipped');
+            });
+        });
+
+        // --- AUDIO PLAYER ---
+        const audioEl       = document.getElementById('audio-element');
+        const audioPlayer   = document.getElementById('audio-player');
+        const playBtn       = document.getElementById('audio-play-btn');
+        const volumeSlider  = document.getElementById('audio-volume-slider');
+
+        audioEl.volume = 0.05; // Démarrer à 5% (très discret)
+
+        playBtn.addEventListener('click', () => {
+            if (audioEl.paused) {
+                audioEl.play().then(() => {
+                    audioPlayer.classList.add('playing');
+                }).catch(err => {
+                    console.warn('Lecture audio impossible :', err);
+                });
+            } else {
+                audioEl.pause();
+                audioPlayer.classList.remove('playing');
+            }
+        });
+
+        // Adaptation du volume via le slider
+        volumeSlider.addEventListener('input', (e) => {
+            audioEl.volume = parseFloat(e.target.value);
+        });
+
+        // Sync UI si l'audio pause depuis une source extérieure
+        audioEl.addEventListener('pause', () => audioPlayer.classList.remove('playing'));
+        audioEl.addEventListener('play',  () => audioPlayer.classList.add('playing'));
+    </script>
+</body>
+</html>
